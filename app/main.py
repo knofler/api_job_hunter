@@ -3,7 +3,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 from app.api.routes import health, users  # Import your routes
-from scripts.seed_users import seed_users  # Import the seeding function
+from scripts.seed_users import seed_users  # Import the user seeding function
+from scripts.seed_jobs import seed_jobs  # Import the job seeding function
 
 app = FastAPI()
 
@@ -25,6 +26,7 @@ db = client.get_database()
 @app.on_event("startup")
 async def startup_event():
     seed_users()
+    seed_jobs()  # Call the job seeding function
 
 # Include your routers
 app.include_router(health.router, prefix="/health")
