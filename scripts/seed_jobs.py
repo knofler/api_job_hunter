@@ -49,4 +49,4 @@ def seed_jobs():
     for job in jobs:
         if not db.jobs.find_one({"title": job["title"], "company": job["company"], "location": job["location"]}):
             db.jobs.insert_one(job)
-            print(f"Seeded job: {job['title']} at {job['company']} in {job['location']}")
+            # print(f"Seeded job: {job['title']} at {job['company']} in {job['location']}")
