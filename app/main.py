@@ -22,10 +22,12 @@ from scripts.seed_users import seed_users
 app = FastAPI()
 
 # Add CORS middleware
+allow_all_origins = len(settings.cors_origins) == 1 and settings.cors_origins[0] == "*"
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=True,
+    allow_origins=["*"] if allow_all_origins else settings.cors_origins,
+    allow_credentials=settings.CORS_ALLOW_CREDENTIALS and not allow_all_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

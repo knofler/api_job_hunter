@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     RUN_STARTUP_SEED: bool = True
     CORS_ALLOW_ORIGINS: str = "*"
+    CORS_ALLOW_CREDENTIALS: bool = False
 
     class Config:
         env_file = ".env"
