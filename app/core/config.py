@@ -3,8 +3,8 @@ from typing import List
 from pydantic import BaseSettings
 
 class Settings(BaseSettings):
-    MONGO_URI: str = "mongodb://mongo:27017/ai_matching"
-    MONGO_DB_NAME: str = "ai_matching"
+    MONGO_URI: str = "mongodb://mongo:27017/jobhunter-app"
+    MONGO_DB_NAME: str = "jobhunter-app"
     APP_NAME: str = "AI Matching Job API"
     DEBUG: bool = True
     RUN_STARTUP_SEED: bool = True
