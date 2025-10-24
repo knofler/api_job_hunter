@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: ai-matching-job-api
+    env: docker
+    plan: free
+    autoDeploy: true
+    runtime: docker
+    region: singapore
+    dockerContext: .
+    dockerfilePath: Dockerfile
+    envVars:
+      - key: PORT
+        value: "8080"

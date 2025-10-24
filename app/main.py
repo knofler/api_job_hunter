@@ -1,9 +1,8 @@
-import os
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 
+from app.core.config import settings
 from app.api.routes import (
     applications,
     candidates,
@@ -25,21 +24,22 @@ app = FastAPI()
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for development
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Get MongoDB URI from environment variable
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/ai_matching")
-client = MongoClient(MONGO_URI)
-db = client.get_database()
+# Configure MongoDB client
+client = MongoClient(settings.MONGO_URI)
+db = client.get_database(settings.MONGO_DB_NAME)
 
 # Seed data during startup
 @app.on_event("startup")
 async def startup_event():
-    # Seed users and jobs
+    if not settings.RUN_STARTUP_SEED:
+        return
+
     seed_users()
     seed_jobs()
     seed_candidate_workflow()
