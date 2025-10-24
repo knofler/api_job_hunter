@@ -1,17 +1,22 @@
 FROM python:3.12-slim
 
-# Set the working directory
+ENV PYTHONDONTWRITEBYTECODE=1 \
+	PYTHONUNBUFFERED=1 \
+	PORT=8080
+
 WORKDIR /app
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN apt-get update \
+	&& apt-get install --no-install-recommends -y build-essential \
+	&& rm -rf /var/lib/apt/lists/*
 
-# Copy the application code
-COPY . .
+COPY requirements.txt ./
+RUN pip install --upgrade pip \
+	&& pip install --no-cache-dir -r requirements.txt
 
-# Expose the port FastAPI runs on
-EXPOSE 8000
+COPY app ./app
+COPY scripts ./scripts
+COPY models ./models
+EXPOSE 8080
 
-# Run the FastAPI app
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["bash", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}"]

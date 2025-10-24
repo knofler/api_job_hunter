@@ -4,6 +4,7 @@ from app.main import app
 client = TestClient(app)
 
 def test_get_resumes():
-    response = client.get("/resumes/")
+    response = client.get("/resumes/candidate_1")
     assert response.status_code == 200
-    assert "message" in response.json()
+    payload = response.json()
+    assert "resumes" in payload

@@ -6,4 +6,5 @@ client = TestClient(app)
 def test_get_users():
     response = client.get("/users/")
     assert response.status_code == 200
-    assert "message" in response.json()
+    payload = response.json()
+    assert "users" in payload
