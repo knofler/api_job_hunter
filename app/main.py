@@ -13,6 +13,8 @@ from app.api.routes import (
     resumes,
     scrape_jobs_api,
     users,
+    recruiter_workflow,
+    admin_llm,
 )
 from scripts.seed_candidate_workflow import seed_candidate_workflow
 from scripts.seed_jobs import seed_jobs
@@ -57,3 +59,7 @@ app.include_router(applications.router)
 app.include_router(ranking.router, prefix="/ranking")
 app.include_router(recruiters.router)
 app.include_router(scrape_jobs_api.router, prefix="/api")  # Register the scrape_jobs_api router
+app.include_router(recruiter_workflow.router)
+app.include_router(admin_llm.router)
+app.include_router(recruiter_workflow.router)
+app.include_router(admin_llm.router)
