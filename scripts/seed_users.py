@@ -1,12 +1,14 @@
 import os
-from pymongo import MongoClient
 import random
+
+from pymongo import MongoClient
 
 def seed_users():
     """Seed the users collection with diverse dummy data if it's empty."""
-    MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/ai_matching")
-    client = MongoClient(MONGO_URI)
-    db = client.get_database()
+    mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/jobhunter-app")
+    mongo_db = os.getenv("MONGO_DB_NAME", "jobhunter-app")
+    client = MongoClient(mongo_uri)
+    db = client.get_database(mongo_db)
 
     # Define possible skills
     skills = [

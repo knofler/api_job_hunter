@@ -77,9 +77,10 @@ def _name_for_index(index: int) -> str:
 
 
 def seed_recruiters():
-    mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/ai_matching")
+    mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/jobhunter-app")
+    mongo_db = os.getenv("MONGO_DB_NAME", "jobhunter-app")
     client = MongoClient(mongo_uri)
-    db = client.get_database()
+    db = client.get_database(mongo_db)
 
     allowed_ids: List[str] = []
 

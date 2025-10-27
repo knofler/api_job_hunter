@@ -140,9 +140,10 @@ LOCATIONS = [
 
 
 def _connect_db():
-    mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/ai_matching")
+    mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/jobhunter-app")
+    mongo_db = os.getenv("MONGO_DB_NAME", "jobhunter-app")
     client = MongoClient(mongo_uri)
-    return client.get_database()
+    return client.get_database(mongo_db)
 
 
 def _compute_match_score(candidate_skills: List[str], job_skills: List[str]) -> float:
