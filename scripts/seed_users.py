@@ -1,5 +1,6 @@
 import os
 import random
+from datetime import datetime
 
 from pymongo import MongoClient
 
@@ -45,3 +46,51 @@ def seed_users():
         print(f"Inserted {len(users)} users into the 'users' collection.")
     else:
         print("Users collection already seeded.")
+
+    demo_users = [
+        {
+            "name": "Cam Candidate",
+            "email": "candidate.demo@jobhunter.ai",
+            "age": 31,
+            "location": "Sydney, NSW",
+            "gender": "Non-binary",
+            "skills": ["React", "TypeScript", "GraphQL", "AWS"],
+            "persona": "candidate",
+        },
+        {
+            "name": "River Recruiter",
+            "email": "recruiter.demo@jobhunter.ai",
+            "age": 38,
+            "location": "Melbourne, VIC",
+            "gender": "Female",
+            "skills": ["Talent Sourcing", "Interviewing", "Hiring Strategy"],
+            "persona": "recruiter",
+        },
+        {
+            "name": "Alex Admin",
+            "email": "admin.demo@jobhunter.ai",
+            "age": 42,
+            "location": "Brisbane, QLD",
+            "gender": "Male",
+            "skills": ["Security", "Compliance", "LLM Governance"],
+            "persona": "admin",
+        },
+    ]
+
+    for demo in demo_users:
+        payload = {
+            **demo,
+            "updated_at": datetime.utcnow(),
+            "is_demo": True,
+        }
+        db.users.update_one(
+            {"email": demo["email"]},
+            {
+                "$set": payload,
+                "$setOnInsert": {
+                    "created_at": datetime.utcnow(),
+                },
+            },
+            upsert=True,
+        )
+    print("Demo persona users upserted.")
