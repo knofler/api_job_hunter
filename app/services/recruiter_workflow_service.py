@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Dict, Iterable, List, Optional
 
 from app.models.llm_model import LLMProviderConfig, LLMWorkflowSettings
@@ -27,6 +28,9 @@ _SYSTEM_PROMPT = (
     "decide who should advance. Always ground recommendations in the supplied evidence, avoid inventing facts, and "
     "respond with clean JSON only."
 )
+
+logger = logging.getLogger(__name__)
+
 
 _STEP_ORDER = [
     "core_skills",
@@ -178,15 +182,32 @@ async def _invoke_ai_analysis(
     data = await _invoke_json(orchestrator, config, instruction, context_json)
     markdown = data.get("ai_analysis_markdown", "")
     candidates_payload = data.get("candidate_analysis", [])
+    if isinstance(candidates_payload, str):
+        # Some LLM responses double-encode JSON arrays; attempt to decode before proceeding.
+        try:
+            candidates_payload = json.loads(candidates_payload)
+        except json.JSONDecodeError as exc:  # noqa: PERF203
+            raise RuntimeError("LLM response returned string for candidate_analysis; expected JSON array") from exc
+    if not isinstance(candidates_payload, list):
+        logger.warning("LLM candidate_analysis payload malformed: %r", candidates_payload)
+        raise RuntimeError("LLM response returned invalid candidate_analysis payload; expected list of objects")
     candidates: List[CandidateAnalysis] = []
     for item in candidates_payload:
+        if isinstance(item, str):
+            try:
+                item = json.loads(item)
+            except json.JSONDecodeError as exc:  # noqa: PERF203
+                raise RuntimeError("LLM returned string item in candidate_analysis; expected JSON object") from exc
+        if not isinstance(item, dict):
+            logger.warning("LLM candidate_analysis entry malformed: %r", item)
+            raise RuntimeError("LLM returned malformed candidate_analysis entry; expected JSON object")
         skill_alignment = [
             SkillAlignment(
                 skill=alignment.get("skill", ""),
                 status=alignment.get("status", ""),
                 evidence=alignment.get("evidence", ""),
             )
-            for alignment in item.get("skill_alignment", [])
+            for alignment in (item.get("skill_alignment", []) if isinstance(item.get("skill_alignment", []), list) else [])
         ]
         candidates.append(
             CandidateAnalysis(
