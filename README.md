@@ -24,6 +24,18 @@ This is the backend API for the AI Matching Job application. It is built using F
    ```
 3. Access the FastAPI docs at `http://localhost:8000/docs` once the stack is running.
 
+### Automation shortcuts
+
+Install `just` (`brew install just`) and use the bundled recipes:
+
+```bash
+just install    # pip install runtime + dev dependencies
+just serve      # start uvicorn with live reload on port 8010
+just verify     # run Ruff lint plus pytest
+just seed       # load default data into Mongo
+just pr-draft   # open a draft PR via GitHub CLI
+```
+
 ### LLM configuration
 
 The recruiter workflow endpoints call external LLM APIs. Provide credentials via environment variables or the admin

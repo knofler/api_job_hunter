@@ -58,5 +58,7 @@ async def put_settings(payload: LLMSettingsUpdatePayload) -> dict:
     try:
         updated = await llm_settings_service.update_settings(payload)
         return updated.masked().dict(by_alias=True)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except RuntimeError as exc:  # noqa: BLE001
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc

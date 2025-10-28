@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any, Dict, Optional
+from urllib.parse import urlparse
 
 from app.core.config import settings
 from app.core.database import db
@@ -62,31 +63,39 @@ def _config_from_env(provider: str | None = None) -> LLMProviderConfig:
     target = (provider or settings.LLM_DEFAULT_PROVIDER).lower().strip() or "openai"
 
     if target == "openai":
-        return LLMProviderConfig(
+        config = LLMProviderConfig(
             provider="openai",
             model=settings.OPENAI_MODEL,
             api_key=settings.OPENAI_API_KEY,
             base_url=settings.OPENAI_BASE_URL,
         )
+        _validate_base_url(config.provider, config.base_url)
+        return config
     if target == "anthropic":
-        return LLMProviderConfig(
+        config = LLMProviderConfig(
             provider="anthropic",
             model=settings.ANTHROPIC_MODEL,
             api_key=settings.ANTHROPIC_API_KEY,
         )
+        _validate_base_url(config.provider, config.base_url)
+        return config
     if target == "google":
-        return LLMProviderConfig(
+        config = LLMProviderConfig(
             provider="google",
             model=settings.GOOGLE_GEMINI_MODEL,
             api_key=settings.GOOGLE_GEMINI_API_KEY,
         )
+        _validate_base_url(config.provider, config.base_url)
+        return config
     if target == "deepseek":
-        return LLMProviderConfig(
+        config = LLMProviderConfig(
             provider="deepseek",
             model=settings.DEEPSEEK_MODEL,
             api_key=settings.DEEPSEEK_API_KEY,
             base_url=settings.DEEPSEEK_BASE_URL,
         )
+        _validate_base_url(config.provider, config.base_url)
+        return config
     if target == "bedrock":
         extra_payload = {
             key: value
@@ -98,12 +107,14 @@ def _config_from_env(provider: str | None = None) -> LLMProviderConfig:
             }.items()
             if value
         }
-        return LLMProviderConfig(
+        config = LLMProviderConfig(
             provider="bedrock",
             model=settings.BEDROCK_MODEL,
             api_key=settings.AWS_SECRET_ACCESS_KEY,
             extra_payload=extra_payload,
         )
+        _validate_base_url(config.provider, config.base_url)
+        return config
     raise ValueError(f"Unsupported LLM provider '{target}' in environment configuration")
 
 
@@ -150,7 +161,7 @@ def _merge_config(new_config: LLMProviderConfig, existing: LLMProviderConfig | N
         return value
 
     merged_payload: Dict[str, Any] = {**existing.extra_payload, **new_config.extra_payload}
-    return LLMProviderConfig(
+    merged_config = LLMProviderConfig(
         provider=new_config.provider,
         model=_normalise_model(new_config.model),
         api_key=_normalise_api_key(new_config.api_key),
@@ -160,6 +171,8 @@ def _merge_config(new_config: LLMProviderConfig, existing: LLMProviderConfig | N
         extra_headers={**existing.extra_headers, **new_config.extra_headers},
         extra_payload=merged_payload,
     )
+    _validate_base_url(merged_config.provider, merged_config.base_url)
+    return merged_config
 
 
 def _config_to_document(config: LLMProviderConfig) -> Dict[str, Any]:
@@ -186,7 +199,7 @@ def _config_from_document(document: Dict[str, Any]) -> LLMProviderConfig:
 
     extra_payload = _decode_payload(data.get("extra_payload", {}))
 
-    return LLMProviderConfig(
+    config = LLMProviderConfig(
         provider=provider,
         model=data.get("model") or env_config_for_provider(provider).model,
         api_key=api_key,
@@ -195,6 +208,40 @@ def _config_from_document(document: Dict[str, Any]) -> LLMProviderConfig:
         max_tokens=data.get("max_tokens"),
         extra_headers=data.get("extra_headers", {}),
         extra_payload=extra_payload,
+    )
+    _validate_base_url(config.provider, config.base_url)
+    return config
+
+
+_ALLOWED_BASE_HOST_SUFFIXES: Dict[str, tuple[str, ...]] = {
+    "openai": ("api.openai.com", ".openai.azure.com"),
+    "anthropic": ("api.anthropic.com",),
+    "google": ("generativelanguage.googleapis.com",),
+    "deepseek": ("api.deepseek.com",),
+    # Bedrock uses the AWS SDK instead of HTTP base URLs, so we ignore base_url.
+    "bedrock": tuple(),
+}
+
+
+def _validate_base_url(provider: str, base_url: Optional[str]) -> None:
+    if not base_url or provider == "bedrock":
+        return
+
+    parsed = urlparse(base_url)
+    if parsed.scheme != "https" or not parsed.netloc:
+        raise ValueError(f"Base URL for provider '{provider}' must be an https URL (got '{base_url}').")
+
+    allowed_suffixes = _ALLOWED_BASE_HOST_SUFFIXES.get(provider, tuple())
+    if not allowed_suffixes:
+        return
+
+    host = parsed.netloc.lower()
+    if any(host == suffix or host.endswith(suffix) for suffix in allowed_suffixes):
+        return
+
+    allowed_text = ", ".join(allowed_suffixes)
+    raise ValueError(
+        f"Base URL '{base_url}' is not allowed for provider '{provider}'. Expected host to match: {allowed_text}."
     )
 
 
