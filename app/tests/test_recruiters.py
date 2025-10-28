@@ -1,12 +1,11 @@
-from fastapi.testclient import TestClient
+import pytest
+from httpx import AsyncClient
 
-from app.main import app
-
-client = TestClient(app)
+pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
-def test_list_recruiters_paginates():
-    response = client.get("/recruiters/", params={"page": 1, "page_size": 5})
+async def test_list_recruiters_paginates(async_client: AsyncClient):
+    response = await async_client.get("/recruiters/", params={"page": 1, "page_size": 5})
     assert response.status_code == 200
     payload = response.json()
 

@@ -1,10 +1,11 @@
-from fastapi.testclient import TestClient
-from app.main import app
+import pytest
+from httpx import AsyncClient
 
-client = TestClient(app)
+pytestmark = pytest.mark.asyncio(loop_scope="session")
 
-def test_get_jobs():
-    response = client.get("/jobs/")
+
+async def test_get_jobs(async_client: AsyncClient):
+    response = await async_client.get("/jobs/")
     assert response.status_code == 200
     payload = response.json()
     assert "items" in payload

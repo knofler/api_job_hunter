@@ -1,12 +1,11 @@
-from fastapi.testclient import TestClient
+import pytest
+from httpx import AsyncClient
 
-from app.main import app
-
-client = TestClient(app)
+pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
-def test_list_candidates_paginates():
-    response = client.get("/candidates/", params={"page": 1, "page_size": 5})
+async def test_list_candidates_paginates(async_client: AsyncClient):
+    response = await async_client.get("/candidates/", params={"page": 1, "page_size": 5})
     assert response.status_code == 200
     payload = response.json()
 
@@ -17,8 +16,8 @@ def test_list_candidates_paginates():
     assert payload["page_size"] == 5
 
 
-def test_candidate_profile_available():
-    response = client.get("/candidates/candidate_1")
+async def test_candidate_profile_available(async_client: AsyncClient):
+    response = await async_client.get("/candidates/candidate_1")
     assert response.status_code == 200
     payload = response.json()
     assert payload["candidate_id"] == "candidate_1"
