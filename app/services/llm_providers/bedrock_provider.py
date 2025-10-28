@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 from functools import partial
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import boto3
 

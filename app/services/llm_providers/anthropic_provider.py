@@ -4,7 +4,7 @@ from typing import Any, Dict, List
 
 import httpx
 
-from .base import LLMMessage, LLMProvider, LLMRequest, ProviderNotConfiguredError, ensure_api_key
+from .base import LLMProvider, LLMRequest, ProviderNotConfiguredError, ensure_api_key
 
 
 class AnthropicProvider(LLMProvider):

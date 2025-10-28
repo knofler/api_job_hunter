@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
@@ -21,7 +23,7 @@ async def list_candidate_applications(
 class ApplicationCreate(BaseModel):
     job_id: str
     resume_id: str
-    note: str | None = None
+    note: Optional[str] = None
 
 
 class ApplicationUpdate(BaseModel):

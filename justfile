@@ -15,15 +15,15 @@ serve:
 
 # Format source files with Ruff
 format:
-	ruff format app
+	python3 -m ruff format app
 
 # Lint backend source
 lint:
-	ruff check app
+	python3 -m ruff check app
 
 # Run test suite
 pytest:
-	pytest
+	python3 -m pytest
 
 # Aggregate lint + tests
 verify: lint pytest
