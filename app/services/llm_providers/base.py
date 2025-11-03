@@ -38,6 +38,15 @@ class LLMProvider(abc.ABC):
         Implementations must raise ``ValueError`` for configuration issues and ``RuntimeError`` for provider errors.
         """
 
+    async def generate_stream(self, request: LLMRequest):
+        """Generate content with streaming support (token by token).
+        
+        Yields chunks of text as they arrive from the provider.
+        Default implementation falls back to non-streaming.
+        """
+        result = await self.generate(request)
+        yield result
+
     def supports_response_format(self, response_format: str) -> bool:
         """Return True if this provider natively supports the requested response format."""
         return response_format == "text"

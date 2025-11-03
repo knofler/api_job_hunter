@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
-from typing import Dict, Iterable, List, Optional
+from typing import AsyncGenerator, Dict, Iterable, List, Optional
 
 from app.models.llm_model import LLMProviderConfig, LLMWorkflowSettings
 from app.models.recruiter_workflow import (
@@ -76,6 +77,146 @@ async def generate_workflow(payload: RecruiterWorkflowRequest) -> RecruiterWorkf
         fairness_guidance=fairness_result,
         interview_preparation=interview_result,
     )
+
+
+async def generate_workflow_stream(payload: RecruiterWorkflowRequest) -> AsyncGenerator[Dict, None]:
+    """Generate workflow with streaming updates for each step."""
+    if not payload.job_description.strip():
+        raise ValueError("job_description is required")
+    if not payload.resumes:
+        raise ValueError("At least one resume must be provided")
+
+    orchestrator = LLMOrchestrator()
+    workflow_settings = await llm_settings_service.get_settings()
+
+    yield {"type": "status", "step": "loading", "message": "Loading resume contexts..."}
+    resume_contexts = await _load_resume_context(payload.resumes)
+    context_json = _render_context(payload.job_metadata, payload.job_description, resume_contexts)
+    step_configs = _resolve_step_configs(payload, workflow_settings)
+
+    # Step 1: Core Skills
+    yield {"type": "status", "step": "core_skills", "message": "Analyzing core must-have skills..."}
+    await asyncio.sleep(0.5)  # Small delay for visual feedback
+    core_result = await _invoke_core_skills(orchestrator, step_configs["core_skills"], context_json)
+    yield {"type": "result", "step": "core_skills", "data": [skill.dict() for skill in core_result]}
+    await asyncio.sleep(0.3)
+
+    # Step 2: AI Analysis (with true streaming for markdown)
+    yield {"type": "status", "step": "ai_analysis", "message": "Running AI-powered analysis..."}
+    
+    # First, stream the markdown analysis
+    markdown_instruction = (
+        "Craft a recruiter-facing markdown summary analyzing the candidates against the job requirements. "
+        "Include sections with headers (##), key insights, strengths, concerns, and recommendations. "
+        "Make it informative and actionable for a recruiter. Return ONLY markdown text, no JSON."
+    )
+    markdown_messages = [
+        {"role": "system", "content": _SYSTEM_PROMPT},
+        {"role": "user", "content": f"{markdown_instruction}\n\nContext:\n{context_json}"},
+    ]
+    markdown_llm_messages = [LLMMessage(role=msg["role"], content=msg["content"]) for msg in markdown_messages]
+    
+    # Collect streamed markdown chunks
+    accumulated_text = ""
+    async for chunk in orchestrator.generate_stream(markdown_llm_messages, step_configs["ai_analysis"]):
+        accumulated_text += chunk
+        yield {
+            "type": "partial",
+            "step": "ai_analysis",
+            "data": {
+                "markdown": accumulated_text,
+            },
+        }
+    
+    # Then get structured candidate analysis
+    try:
+        analysis_result = await _invoke_ai_analysis(orchestrator, step_configs["ai_analysis"], context_json)
+        yield {
+            "type": "result",
+            "step": "ai_analysis",
+            "data": {
+                "markdown": accumulated_text,  # Use the streamed markdown
+                "candidates": [c.dict() for c in analysis_result["candidates"]],
+            },
+        }
+    except Exception as e:
+        logger.error(f"Failed to parse AI analysis result: {e}")
+        # Fall back to accumulated text as markdown
+        yield {
+            "type": "result",
+            "step": "ai_analysis",
+            "data": {
+                "markdown": accumulated_text,
+                "candidates": [],
+            },
+        }
+    await asyncio.sleep(0.3)
+
+    # Step 3: Ranked Shortlist
+    yield {"type": "status", "step": "ranked_shortlist", "message": "Creating ranked shortlist..."}
+    await asyncio.sleep(0.5)
+    shortlist_result = await _invoke_ranked_shortlist(orchestrator, step_configs["ranked_shortlist"], context_json)
+    yield {"type": "result", "step": "ranked_shortlist", "data": [item.dict() for item in shortlist_result]}
+    await asyncio.sleep(0.3)
+
+    # Step 4: Detailed Readout
+    yield {"type": "status", "step": "detailed_readout", "message": "Generating detailed candidate readouts..."}
+    await asyncio.sleep(0.5)
+    readout_result = await _invoke_detailed_readout(orchestrator, step_configs["detailed_readout"], context_json)
+    yield {"type": "result", "step": "detailed_readout", "data": [item.dict() for item in readout_result]}
+    await asyncio.sleep(0.3)
+
+    # Step 5: Engagement Plan (stream items one by one)
+    yield {"type": "status", "step": "engagement_plan", "message": "Creating engagement plan..."}
+    await asyncio.sleep(0.5)
+    engagement_result = await _invoke_engagement_plan(orchestrator, step_configs["engagement_plan"], context_json)
+    accumulated_engagement = []
+    for item in engagement_result:
+        accumulated_engagement.append(item.dict())
+        yield {"type": "partial", "step": "engagement_plan", "data": accumulated_engagement}
+        await asyncio.sleep(0.2)  # Small delay between items for visual effect
+    yield {"type": "result", "step": "engagement_plan", "data": [item.dict() for item in engagement_result]}
+    await asyncio.sleep(0.3)
+
+    # Step 6: Fairness Guidance (stream items one by one)
+    yield {"type": "status", "step": "fairness_guidance", "message": "Generating fairness & panel guidance..."}
+    await asyncio.sleep(0.5)
+    fairness_result = await _invoke_fairness_guidance(orchestrator, step_configs["fairness_guidance"], context_json)
+    accumulated_fairness = []
+    for item in fairness_result:
+        accumulated_fairness.append(item.dict())
+        yield {"type": "partial", "step": "fairness_guidance", "data": accumulated_fairness}
+        await asyncio.sleep(0.2)  # Small delay between items for visual effect
+    yield {"type": "result", "step": "fairness_guidance", "data": [item.dict() for item in fairness_result]}
+    await asyncio.sleep(0.3)
+
+    # Step 7: Interview Preparation (stream items one by one)
+    yield {"type": "status", "step": "interview_preparation", "message": "Preparing interview pack..."}
+    await asyncio.sleep(0.5)
+    interview_result = await _invoke_interview_pack(orchestrator, step_configs["interview_preparation"], context_json)
+    accumulated_interview = []
+    for item in interview_result:
+        accumulated_interview.append(item.dict())
+        yield {"type": "partial", "step": "interview_preparation", "data": accumulated_interview}
+        await asyncio.sleep(0.2)  # Small delay between items for visual effect
+    yield {"type": "result", "step": "interview_preparation", "data": [item.dict() for item in interview_result]}
+    await asyncio.sleep(0.3)
+
+    # Final complete event
+    yield {
+        "type": "complete",
+        "data": {
+            "job": payload.job_metadata.dict() if payload.job_metadata else {},
+            "core_skills": [skill.dict() for skill in core_result],
+            "ai_analysis_markdown": analysis_result["markdown"],
+            "candidate_analysis": [c.dict() for c in analysis_result["candidates"]],
+            "ranked_shortlist": [item.dict() for item in shortlist_result],
+            "detailed_readout": [item.dict() for item in readout_result],
+            "engagement_plan": [item.dict() for item in engagement_result],
+            "fairness_guidance": [item.dict() for item in fairness_result],
+            "interview_preparation": [item.dict() for item in interview_result],
+        },
+    }
 
 
 async def _load_resume_context(resume_refs: Iterable[ResumeReference]) -> List[Dict[str, Optional[str]]]:

@@ -51,6 +51,33 @@ class LLMOrchestrator:
 
         return await provider.generate(request)
 
+    async def generate_stream(self, messages: Iterable[LLMMessage], config: LLMProviderConfig):
+        """Generate content with streaming support (token by token)."""
+        hydrated = self._hydrate_config(config)
+        provider = self._providers.get(hydrated.provider)
+        if provider is None:
+            raise ValueError(f"Unsupported LLM provider '{hydrated.provider}'")
+
+        request = LLMRequest(
+            model=hydrated.model,
+            messages=list(messages),
+            api_key=hydrated.api_key or "",
+            base_url=hydrated.base_url,
+            max_tokens=hydrated.max_tokens,
+            temperature=hydrated.temperature if hydrated.temperature is not None else _DEFAULT_TEMPERATURE,
+            extra_headers=hydrated.extra_headers,
+            extra_payload=hydrated.extra_payload,
+            response_format="json",
+        )
+
+        if not request.api_key and hydrated.provider not in {"bedrock"}:
+            raise ProviderNotConfiguredError(
+                f"Provider '{hydrated.provider}' is missing an API key. Configure credentials in env vars or admin settings."
+            )
+
+        async for chunk in provider.generate_stream(request):
+            yield chunk
+
     def _hydrate_config(self, config: LLMProviderConfig) -> LLMProviderConfig:
         env_defaults = env_config_for_provider(config.provider)
 
