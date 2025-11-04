@@ -154,8 +154,18 @@ def _merge_config(new_config: LLMProviderConfig, existing: LLMProviderConfig | N
         return value if value is not None else existing.max_tokens
 
     def _normalise_api_key(value: str | None) -> Optional[str]:
-        if value is None or value == "":
+        """Normalise API key updates.
+
+        Rules:
+        - None: keep existing key (no change submitted)
+        - Empty string: explicitly clear the key
+        - Masked (starts with ****): keep existing key
+        - Otherwise: use provided value
+        """
+        if value is None:
             return existing.api_key
+        if value == "":
+            return None
         if value.startswith("****"):
             return existing.api_key
         return value
