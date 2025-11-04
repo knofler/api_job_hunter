@@ -515,4 +515,14 @@ def _parse_json_response(raw: str) -> Dict[str, object]:
     if start == -1 or end == -1:
         raise RuntimeError("LLM response did not contain JSON object")
     json_str = stripped[start : end + 1]
-    return json.loads(json_str)
+    
+    # Attempt to fix common JSON issues
+    json_str = json_str.replace("'", '"')  # Replace single quotes with double quotes
+    json_str = json_str.replace('\n', ' ')  # Replace newlines with spaces
+    json_str = json_str.replace('\r', '')  # Remove carriage returns
+    
+    try:
+        return json.loads(json_str)
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse JSON: {e}. Raw response: {raw}")
+        raise RuntimeError(f"LLM returned invalid JSON: {e}") from e
