@@ -10,10 +10,17 @@ class Settings(BaseSettings):
     RUN_STARTUP_SEED: bool = True
     CORS_ALLOW_ORIGINS: str = "*"
     CORS_ALLOW_CREDENTIALS: bool = False
+    # Auth0 / OIDC
+    AUTH0_DOMAIN: Optional[str] = None
+    AUTH0_AUDIENCE: Optional[str] = None
+    AUTH0_ISSUER: Optional[str] = None
+    AUTH0_ALGORITHMS: str = "RS256"
 
     LLM_DEFAULT_PROVIDER: str = "openai"
     LLM_SETTINGS_SECRET_KEY: Optional[str] = None
     ADMIN_API_KEY: Optional[str] = None
+    # When true, ignore env var provider keys and require admin- or user-provided keys
+    DISABLE_ENV_LLM_KEYS: bool = False
 
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_BASE_URL: Optional[str] = None

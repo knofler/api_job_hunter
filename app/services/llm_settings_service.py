@@ -62,11 +62,14 @@ def env_config_for_provider(provider: str) -> LLMProviderConfig:
 def _config_from_env(provider: str | None = None) -> LLMProviderConfig:
     target = (provider or settings.LLM_DEFAULT_PROVIDER).lower().strip() or "openai"
 
+    def _maybe_key(value: Optional[str]) -> Optional[str]:
+        return None if settings.DISABLE_ENV_LLM_KEYS else value
+
     if target == "openai":
         config = LLMProviderConfig(
             provider="openai",
             model=settings.OPENAI_MODEL,
-            api_key=settings.OPENAI_API_KEY,
+            api_key=_maybe_key(settings.OPENAI_API_KEY),
             base_url=settings.OPENAI_BASE_URL,
         )
         _validate_base_url(config.provider, config.base_url)
@@ -75,7 +78,7 @@ def _config_from_env(provider: str | None = None) -> LLMProviderConfig:
         config = LLMProviderConfig(
             provider="anthropic",
             model=settings.ANTHROPIC_MODEL,
-            api_key=settings.ANTHROPIC_API_KEY,
+            api_key=_maybe_key(settings.ANTHROPIC_API_KEY),
         )
         _validate_base_url(config.provider, config.base_url)
         return config
@@ -83,7 +86,7 @@ def _config_from_env(provider: str | None = None) -> LLMProviderConfig:
         config = LLMProviderConfig(
             provider="google",
             model=settings.GOOGLE_GEMINI_MODEL,
-            api_key=settings.GOOGLE_GEMINI_API_KEY,
+            api_key=_maybe_key(settings.GOOGLE_GEMINI_API_KEY),
         )
         _validate_base_url(config.provider, config.base_url)
         return config
@@ -91,7 +94,7 @@ def _config_from_env(provider: str | None = None) -> LLMProviderConfig:
         config = LLMProviderConfig(
             provider="deepseek",
             model=settings.DEEPSEEK_MODEL,
-            api_key=settings.DEEPSEEK_API_KEY,
+            api_key=_maybe_key(settings.DEEPSEEK_API_KEY),
             base_url=settings.DEEPSEEK_BASE_URL,
         )
         _validate_base_url(config.provider, config.base_url)
@@ -102,15 +105,15 @@ def _config_from_env(provider: str | None = None) -> LLMProviderConfig:
             for key, value in {
                 "aws_region": settings.AWS_REGION,
                 "aws_access_key_id": settings.AWS_ACCESS_KEY_ID,
-                "aws_secret_access_key": settings.AWS_SECRET_ACCESS_KEY,
-                "aws_session_token": settings.AWS_SESSION_TOKEN,
+                "aws_secret_access_key": _maybe_key(settings.AWS_SECRET_ACCESS_KEY),
+                "aws_session_token": _maybe_key(settings.AWS_SESSION_TOKEN),
             }.items()
             if value
         }
         config = LLMProviderConfig(
             provider="bedrock",
             model=settings.BEDROCK_MODEL,
-            api_key=settings.AWS_SECRET_ACCESS_KEY,
+            api_key=_maybe_key(settings.AWS_SECRET_ACCESS_KEY),
             extra_payload=extra_payload,
         )
         _validate_base_url(config.provider, config.base_url)
