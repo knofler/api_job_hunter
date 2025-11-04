@@ -8,7 +8,7 @@ from app.api.dependencies import AdminDependency
 from app.models.llm_model import LLMSettingsUpdatePayload
 from app.services import llm_settings_service
 
-router = APIRouter(prefix="/admin/llm", tags=["admin-llm"], dependencies=[AdminDependency])
+router = APIRouter(prefix="/api/admin/llm", tags=["admin-llm"], dependencies=[AdminDependency])
 
 
 @router.get("/providers")

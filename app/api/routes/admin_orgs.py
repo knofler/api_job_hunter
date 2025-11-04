@@ -8,7 +8,7 @@ from app.api.dependencies import AdminDependency
 from app.models.org_model import Org, OrgCreate, OrgMember, OrgUpdate
 from app.services import org_service
 
-router = APIRouter(prefix="/admin/orgs", tags=["admin-orgs"], dependencies=[AdminDependency])
+router = APIRouter(prefix="/api/admin/orgs", tags=["admin-orgs"], dependencies=[AdminDependency])
 
 
 @router.get("")
