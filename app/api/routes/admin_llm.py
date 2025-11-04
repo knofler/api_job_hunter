@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, status
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Query, status
 
 from app.api.dependencies import AdminDependency
 from app.models.llm_model import LLMSettingsUpdatePayload
@@ -48,15 +50,15 @@ def list_providers() -> dict:
 
 
 @router.get("/settings")
-async def get_settings() -> dict:
-    settings_doc = await llm_settings_service.get_settings()
+async def get_settings(org_id: Optional[str] = Query(default=None)) -> dict:
+    settings_doc = await llm_settings_service.get_settings(org_id=org_id)
     return settings_doc.masked().dict(by_alias=True)
 
 
 @router.put("/settings")
-async def put_settings(payload: LLMSettingsUpdatePayload) -> dict:
+async def put_settings(payload: LLMSettingsUpdatePayload, org_id: Optional[str] = Query(default=None)) -> dict:
     try:
-        updated = await llm_settings_service.update_settings(payload)
+        updated = await llm_settings_service.update_settings(payload, org_id=org_id)
         return updated.masked().dict(by_alias=True)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

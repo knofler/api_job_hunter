@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Optional
+
 from fastapi import Depends, Header, HTTPException, status
 
 from app.core.config import settings
@@ -9,7 +13,7 @@ def get_database():
     return db
 
 
-def _extract_bearer_token(authorization: str | None) -> str | None:
+def _extract_bearer_token(authorization: Optional[str]) -> Optional[str]:
     if not authorization:
         return None
     parts = authorization.split()
@@ -18,7 +22,7 @@ def _extract_bearer_token(authorization: str | None) -> str | None:
     return None
 
 
-async def require_user(authorization: str | None = Header(default=None, alias="Authorization")) -> dict:
+async def require_user(authorization: Optional[str] = Header(default=None, alias="Authorization")) -> dict:
     token = _extract_bearer_token(authorization)
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
@@ -37,7 +41,7 @@ async def require_user(authorization: str | None = Header(default=None, alias="A
 
 
 async def require_admin(
-    authorization: str | None = Header(default=None, alias="Authorization"),
+    authorization: Optional[str] = Header(default=None, alias="Authorization"),
     x_admin_token: str = Header(default="", alias="X-Admin-Token"),
 ) -> dict:
     # Prefer JWT roles; fallback to legacy X-Admin-Token if ADMIN_API_KEY is set

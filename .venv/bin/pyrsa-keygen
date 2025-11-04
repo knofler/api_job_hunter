@@ -1,0 +1,7 @@
+#!/Users/rumman.ahmed/Dropbox/Dev/PROJECT/CODE/_MY_PROJECT/JOB_HUNTER/ai-matching-job-api/.venv/bin/python3
+import sys
+from rsa.cli import keygen
+if __name__ == '__main__':
+    if sys.argv[0].endswith('.exe'):
+        sys.argv[0] = sys.argv[0][:-4]
+    sys.exit(keygen())

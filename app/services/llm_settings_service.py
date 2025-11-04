@@ -17,16 +17,23 @@ from app.models.llm_model import (
 _collection = db.llm_settings
 
 
-async def get_settings() -> LLMWorkflowSettings:
-    document = await _collection.find_one({"_id": "global"})
+def _doc_id_for(org_id: Optional[str]) -> str:
+    return f"org:{org_id}" if org_id else "global"
+
+
+async def get_settings(org_id: Optional[str] = None) -> LLMWorkflowSettings:
+    # Try tenant-specific first if org_id provided, else fallback to global
+    key = _doc_id_for(org_id)
+    document = await _collection.find_one({"_id": key})
     if document:
         return _document_to_settings(document)
 
     return _defaults_from_env()
 
 
-async def update_settings(payload: LLMSettingsUpdatePayload) -> LLMWorkflowSettings:
-    existing_document = await _collection.find_one({"_id": "global"})
+async def update_settings(payload: LLMSettingsUpdatePayload, org_id: Optional[str] = None) -> LLMWorkflowSettings:
+    key = _doc_id_for(org_id)
+    existing_document = await _collection.find_one({"_id": key})
     existing_settings = _document_to_settings(existing_document) if existing_document else _defaults_from_env()
 
     merged_default = _merge_config(payload.default, existing_settings.default)
@@ -40,13 +47,14 @@ async def update_settings(payload: LLMSettingsUpdatePayload) -> LLMWorkflowSetti
             merged_steps[step] = current
 
     document = {
-        "_id": "global",
+        "_id": key,
+        "org_id": org_id,
         "default": _config_to_document(merged_default),
         "steps": {step: _config_to_document(config) for step, config in merged_steps.items()},
         "updated_at": datetime.utcnow(),
     }
 
-    await _collection.update_one({"_id": "global"}, {"$set": document}, upsert=True)
+    await _collection.update_one({"_id": key}, {"$set": document}, upsert=True)
     return _document_to_settings(document)
 
 
