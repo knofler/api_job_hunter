@@ -128,6 +128,17 @@ async def generate_workflow_stream(payload: RecruiterWorkflowRequest) -> AsyncGe
             },
         }
     
+    # If the LLM returned JSON instead of markdown, try to extract the markdown
+    if accumulated_text.strip().startswith('{'):
+        try:
+            parsed = json.loads(accumulated_text)
+            if 'markdown' in parsed:
+                accumulated_text = parsed['markdown']
+            elif 'ai_analysis_markdown' in parsed:
+                accumulated_text = parsed['ai_analysis_markdown']
+        except json.JSONDecodeError:
+            pass  # Keep as is
+    
     # Then get structured candidate analysis
     # Initialize with fallback structure
     analysis_result = {
@@ -515,12 +526,6 @@ def _parse_json_response(raw: str) -> Dict[str, object]:
     if start == -1 or end == -1:
         raise RuntimeError("LLM response did not contain JSON object")
     json_str = stripped[start : end + 1]
-    
-    # Attempt to fix common JSON issues
-    json_str = json_str.replace("'", '"')  # Replace single quotes with double quotes
-    json_str = json_str.replace('\n', ' ')  # Replace newlines with spaces
-    json_str = json_str.replace('\r', '')  # Remove carriage returns
-    
     try:
         return json.loads(json_str)
     except json.JSONDecodeError as e:
