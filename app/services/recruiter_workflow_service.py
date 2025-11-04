@@ -129,6 +129,11 @@ async def generate_workflow_stream(payload: RecruiterWorkflowRequest) -> AsyncGe
         }
     
     # Then get structured candidate analysis
+    # Initialize with fallback structure
+    analysis_result = {
+        "markdown": accumulated_text,
+        "candidates": [],
+    }
     try:
         analysis_result = await _invoke_ai_analysis(orchestrator, step_configs["ai_analysis"], context_json)
         yield {
