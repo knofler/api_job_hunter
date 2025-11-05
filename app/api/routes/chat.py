@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from typing import AsyncGenerator
 
 from fastapi import APIRouter
@@ -13,6 +14,20 @@ from app.services.llm_orchestrator import LLMOrchestrator
 from app.services.llm_providers.base import LLMMessage
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+
+def load_system_prompt() -> str:
+    """Load the system prompt from the prompts directory."""
+    prompt_path = os.path.join(os.path.dirname(__file__), "..", "..", "prompts", "recruiter_chat_system.md")
+    try:
+        with open(prompt_path, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        # Fallback to a basic prompt if file not found
+        return (
+            "You are a helpful recruiter assistant. "
+            "You can help analyze candidates, refine workflow sections, and answer questions about the hiring process."
+        )
 
 
 @router.post("/stream")
@@ -35,6 +50,9 @@ async def chat_stream(payload: ChatRequest) -> StreamingResponse:
             # Add user message
             await chat_service.add_message(payload.session_id, "user", payload.message)
             
+            # Load system prompt
+            base_system_prompt = load_system_prompt()
+            
             # Build context-aware system prompt
             context_parts = []
             if session.job_id:
@@ -44,12 +62,9 @@ async def chat_stream(payload: ChatRequest) -> StreamingResponse:
             if session.workflow_context:
                 context_parts.append(f"Workflow context available with {len(session.workflow_context)} sections")
             
-            system_prompt = (
-                "You are a helpful recruiter assistant. "
-                "You can help analyze candidates, refine workflow sections, and answer questions about the hiring process. "
-            )
+            system_prompt = base_system_prompt
             if context_parts:
-                system_prompt += f"\n\nCurrent context: {'; '.join(context_parts)}"
+                system_prompt += f"\n\n## Current Context\n{' '.join(context_parts)}\n\nUse this context to provide relevant, specific assistance."
             
             # Build message history
             messages = [LLMMessage(role="system", content=system_prompt)]
