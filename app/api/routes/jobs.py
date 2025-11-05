@@ -22,6 +22,12 @@ class JobCreate(BaseModel):
     posted_at: Optional[datetime] = None
 
 
+class JobDescriptionUpdate(BaseModel):
+    description: str
+    responsibilities: List[str] = Field(default_factory=list)
+    requirements: List[str] = Field(default_factory=list)
+
+
 @router.get("/")
 async def list_jobs(
     candidate_id: Optional[str] = Query(default=None, description="Candidate identifier to compute match score"),
@@ -37,6 +43,24 @@ async def list_jobs(
         page_size=page_size,
         exclude_applied=exclude_applied,
     )
+
+
+@router.get("/descriptions")
+async def list_job_descriptions(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=10, ge=1, le=50),
+):
+    """List all job descriptions for the recruiter workflow."""
+    return await job_service.list_job_descriptions(page=page, page_size=page_size)
+
+
+@router.put("/descriptions/{job_id}")
+async def update_job_description(job_id: str, update: JobDescriptionUpdate):
+    """Update a job description."""
+    updated_job = await job_service.update_job_description(job_id, update.dict(exclude_unset=True))
+    if not updated_job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return updated_job
 
 
 @router.get("/{job_id}")

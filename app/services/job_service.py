@@ -58,7 +58,10 @@ async def list_jobs(
 
     cursor = (
         db.jobs.find(query)
-        .sort("posted_at", -1)
+        .sort([
+            ("is_curated", -1),  # Sort curated jobs first
+            ("posted_at", -1)
+        ])
         .skip(skip)
         .limit(page_size * 2 if exclude_applied else page_size)
     )
@@ -159,3 +162,64 @@ async def get_top_matches(
         reverse=True,
     )
     return sorted_jobs[:limit]
+
+
+async def list_job_descriptions(*, page: int = 1, page_size: int = 10) -> Dict[str, Any]:
+    """List job descriptions for the recruiter workflow."""
+    page = max(page, 1)
+    page_size = max(1, min(page_size, 50))
+    skip = (page - 1) * page_size
+
+    # Only return curated jobs (not auto-generated ones) for the recruiter workflow
+    query = {"is_curated": True}
+
+    total = await db.jobs.count_documents(query)
+
+    cursor = (
+        db.jobs.find(query, {
+            "_id": 1,
+            "slug": 1,
+            "title": 1,
+            "company": 1,
+            "description": 1,
+            "responsibilities": 1,
+            "requirements": 1,
+            "skills": 1,
+            "location": 1,
+            "employment_type": 1,
+            "salary_range": 1,
+            "code": 1,
+            "is_curated": 1,
+            "updated_at": 1
+        })
+        .sort("title", 1)
+        .skip(skip)
+        .limit(page_size)
+    )
+
+    raw_jobs = await cursor.to_list(length=page_size)
+    serialised = [_serialize_job_document(job) for job in raw_jobs]
+
+    return {
+        "items": serialised,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }
+
+
+async def update_job_description(job_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Update a job description."""
+    try:
+        object_id = ObjectId(job_id)
+    except Exception:
+        return None
+
+    payload = {**update_data, "updated_at": datetime.utcnow()}
+    result = await db.jobs.update_one({"_id": object_id}, {"$set": payload})
+
+    if result.modified_count > 0:
+        updated_job = await db.jobs.find_one({"_id": object_id})
+        return _serialize_job_document(updated_job) if updated_job else None
+
+    return None
