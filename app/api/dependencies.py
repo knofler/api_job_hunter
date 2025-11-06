@@ -46,12 +46,17 @@ async def require_admin(
 ) -> dict:
     # Prefer JWT roles; fallback to legacy X-Admin-Token if ADMIN_API_KEY is set
     if authorization:
-        user = await require_user(authorization)  # type: ignore[arg-type]
-        roles = set(user.get("roles", []))
-        if roles.intersection({"admin", "power_user"}):
-            return user
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin role required")
+        try:
+            user = await require_user(authorization)  # type: ignore[arg-type]
+            roles = set(user.get("roles", []))
+            if roles.intersection({"admin", "power_user"}):
+                return user
+            # If JWT is valid but user doesn't have admin roles, continue to check X-Admin-Token
+        except AuthError:
+            # JWT is invalid, continue to check X-Admin-Token
+            pass
 
+    # Check X-Admin-Token as fallback
     expected = settings.ADMIN_API_KEY
     if expected and x_admin_token == expected:
         return {"sub": "admin-token", "roles": ["admin"]}

@@ -2,12 +2,13 @@ import os
 from datetime import datetime
 from pymongo import MongoClient
 
-def seed_prompts():
+def seed_prompts(db=None):
     """Seed the prompts collection with initial AI prompts for the application."""
-    mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/jobhunter-app")
-    mongo_db = os.getenv("MONGO_DB_NAME", "jobhunter-app")
-    client = MongoClient(mongo_uri)
-    db = client.get_database(mongo_db)
+    if db is None:
+        mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/jobhunter-app")
+        mongo_db = os.getenv("MONGO_DB_NAME", "jobhunter-app")
+        client = MongoClient(mongo_uri)
+        db = client.get_database(mongo_db)
 
     # Initial prompts for different AI functionalities
     prompts = [
@@ -186,39 +187,6 @@ Return JSON with key 'core_skills' containing objects with fields 'name' and 're
 
     print("Prompts seeding completed successfully!")
 
-
-if __name__ == "__main__":
-    seed_prompts()
-
-    # Insert prompts into the database if the collection is empty
-    if db.prompts.count_documents({}) == 0:
-        for prompt in prompts:
-            prompt.update({
-                "created_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow(),
-                "created_by": "system",
-                "updated_by": "system"
-            })
-        db.prompts.insert_many(prompts)
-        print(f"Inserted {len(prompts)} prompts into the 'prompts' collection.")
-    else:
-        print("Prompts collection already seeded.")
-
-    # Update existing prompts if needed (for migrations)
-    for prompt in prompts:
-        existing = db.prompts.find_one({"name": prompt["name"]})
-        if existing and existing.get("version", 1) < prompt.get("version", 1):
-            db.prompts.update_one(
-                {"name": prompt["name"]},
-                {
-                    "$set": {
-                        **prompt,
-                        "updated_at": datetime.utcnow(),
-                        "updated_by": "system"
-                    }
-                }
-            )
-            print(f"Updated prompt: {prompt['name']}")
 
 if __name__ == "__main__":
     seed_prompts()
