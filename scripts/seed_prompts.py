@@ -189,14 +189,6 @@ Return JSON with key 'core_skills' containing objects with fields 'name' and 're
 
 if __name__ == "__main__":
     seed_prompts()
-            "is_active": True,
-            "metadata": {
-                "description": "Assists recruiters with candidate evaluation",
-                "output_format": "JSON",
-                "estimated_tokens": 1300
-            }
-        }
-    ]
 
     # Insert prompts into the database if the collection is empty
     if db.prompts.count_documents({}) == 0:
