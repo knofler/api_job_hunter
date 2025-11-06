@@ -12,185 +12,183 @@ def seed_prompts():
     # Initial prompts for different AI functionalities
     prompts = [
         {
-            "name": "core_skill_analysis",
+            "name": "core_skills_analysis",
             "category": "candidate_analysis",
-            "content": """Analyze the candidate's resume and provide a comprehensive skill assessment.
+            "content": """# Core Skills Analysis Prompt
 
-Context:
-- Resume Content: {resume_content}
-- Job Requirements: {job_requirements}
-- Candidate Experience: {candidate_experience} years
+## Task
+Analyze a job description and candidate resumes to identify the most critical skills and competencies required for the role. Focus on the essential "must-have" skills that candidates need to possess to be successful.
 
-Please provide:
-1. Core technical skills identified
-2. Skill proficiency levels (Beginner/Intermediate/Advanced/Expert)
-3. Gaps between candidate skills and job requirements
-4. Recommendations for skill development
-5. Overall match score (0-100) with detailed reasoning
+## Analysis Framework
 
-Format your response as valid JSON with the following structure:
-{
-  "technical_skills": [{"skill": "Python", "level": "Advanced", "evidence": "..."}],
-  "skill_gaps": ["Cloud Architecture", "DevOps"],
-  "recommendations": ["Complete AWS certification", "Learn Kubernetes"],
-  "match_score": 85,
-  "reasoning": "Strong Python skills but lacks cloud experience"
-}""",
+### 1. Job Requirements Analysis
+- Extract explicit skill requirements from job description
+- Identify implicit skills needed for role success
+- Categorize skills by importance (critical, important, nice-to-have)
+- Consider technical, soft, and domain-specific skills
+
+### 2. Candidate Evaluation
+- Assess each candidate's skill alignment with job requirements
+- Rate skill proficiency levels (Yes, Partial, No)
+- Identify skill gaps and development opportunities
+- Consider transferable skills and potential
+
+### 3. Core Skills Identification
+- Determine 5-8 most critical skills for role success
+- Provide clear rationale for each core skill selection
+- Explain business impact of each skill
+- Suggest evaluation methods for each skill
+
+## Output Structure
+For each core skill, provide:
+- **Skill Name**: Clear, specific skill identifier
+- **Reason**: Why this skill is critical for the role
+- **Evaluation Criteria**: How to assess this skill in candidates
+
+## Guidelines
+- Focus on skills that directly impact job performance
+- Balance technical and behavioral competencies
+- Consider both current and future role requirements
+- Ensure skills are measurable and observable
+- Avoid overemphasis on "nice-to-have" skills
+
+Return JSON with key 'core_skills' containing objects with fields 'name' and 'reason'.""",
             "variables": {
-                "resume_content": "Full resume text content",
-                "job_requirements": "Job description and required skills",
-                "candidate_experience": "Years of experience"
+                "job_description": "Full job description text",
+                "candidate_resumes": "Array of candidate resume texts"
             },
             "version": 1,
             "is_active": True,
             "metadata": {
-                "description": "Analyzes candidate skills against job requirements",
+                "description": "Identifies critical skills required for job success",
                 "output_format": "JSON",
                 "estimated_tokens": 1500
             }
         },
         {
-            "name": "job_matching",
-            "category": "job_matching",
-            "content": """Match candidates to jobs based on skills, experience, and requirements.
-
-Candidate Profile:
-- Skills: {candidate_skills}
-- Experience: {candidate_experience} years
-- Location: {candidate_location}
-
-Job Details:
-- Title: {job_title}
-- Required Skills: {job_skills}
-- Location: {job_location}
-- Description: {job_description}
-
-Calculate a match score (0-100) considering:
-1. Skill overlap and proficiency
-2. Experience level compatibility
-3. Location match
-4. Overall cultural fit indicators
-
-Provide detailed reasoning for the match score.
-
-Response format:
-{
-  "match_score": 78,
-  "skill_match": 85,
-  "experience_match": 70,
-  "location_match": 100,
-  "reasoning": "Excellent skill match with Python and React, but limited senior experience",
-  "recommendations": ["Consider for junior role", "Strong candidate for mid-level position"]
-}""",
+            "name": "candidate_analysis",
+            "category": "candidate_analysis",
+            "content": """For each candidate, score the fit versus the job. Provide match_score (0-100), bias_free_score (0-100), a recruiter summary (<= 400 characters), up to three highlights, and a skill_alignment array with fields 'skill', 'status' (Yes/Partial/No), and 'evidence'. Also craft a recruiter-facing markdown summary and return it as 'ai_analysis_markdown'. Respond with JSON containing keys 'ai_analysis_markdown' and 'candidate_analysis'.""",
             "variables": {
-                "candidate_skills": "List of candidate skills",
-                "candidate_experience": "Years of experience",
-                "candidate_location": "Candidate location",
-                "job_title": "Job title",
-                "job_skills": "Required job skills",
-                "job_location": "Job location",
-                "job_description": "Full job description"
+                "job_description": "Job requirements and description",
+                "candidates": "Array of candidate information"
             },
             "version": 1,
             "is_active": True,
             "metadata": {
-                "description": "Matches candidates to jobs with detailed scoring",
+                "description": "Analyzes candidate fit against job requirements",
+                "output_format": "JSON",
+                "estimated_tokens": 2000
+            }
+        },
+        {
+            "name": "ranked_shortlist",
+            "category": "candidate_ranking",
+            "content": """Rank candidates based on job fit and provide a prioritized shortlist. Consider technical skills, experience level, cultural fit, and growth potential. Return JSON with 'ranked_candidates' array containing objects with 'candidate_id', 'rank', 'score', and 'justification'.""",
+            "variables": {
+                "job_requirements": "Job requirements and criteria",
+                "candidates": "Array of candidate profiles"
+            },
+            "version": 1,
+            "is_active": True,
+            "metadata": {
+                "description": "Ranks candidates for shortlisting",
+                "output_format": "JSON",
+                "estimated_tokens": 1500
+            }
+        },
+        {
+            "name": "detailed_readout",
+            "category": "candidate_analysis",
+            "content": """Provide detailed analysis of top candidates including strengths, weaknesses, interview questions, and hiring recommendations. Return comprehensive markdown report.""",
+            "variables": {
+                "top_candidates": "Top ranked candidates",
+                "job_details": "Job requirements and context"
+            },
+            "version": 1,
+            "is_active": True,
+            "metadata": {
+                "description": "Detailed candidate analysis report",
+                "output_format": "Markdown",
+                "estimated_tokens": 2000
+            }
+        },
+        {
+            "name": "engagement_plan",
+            "category": "recruitment_strategy",
+            "content": """Create a comprehensive engagement plan for top candidates including communication strategy, timeline, and follow-up actions. Return JSON with engagement steps and timeline.""",
+            "variables": {
+                "candidates": "Selected candidates for engagement",
+                "job_details": "Job information and requirements"
+            },
+            "version": 1,
+            "is_active": True,
+            "metadata": {
+                "description": "Creates candidate engagement strategy",
                 "output_format": "JSON",
                 "estimated_tokens": 1200
             }
         },
         {
-            "name": "resume_health_analysis",
-            "category": "candidate_analysis",
-            "content": """Analyze resume health and provide improvement suggestions.
-
-Resume Content: {resume_content}
-
-Evaluate the resume on:
-1. Structure and formatting
-2. Content completeness
-3. Keyword optimization for ATS
-4. Impact statement quality
-5. Contact information and personal branding
-6. Length and conciseness
-7. Industry-specific best practices
-
-Provide specific, actionable recommendations for improvement.
-
-Response format:
-{
-  "overall_score": 75,
-  "categories": {
-    "structure": {"score": 80, "feedback": "Good structure with clear sections"},
-    "content": {"score": 70, "feedback": "Missing quantifiable achievements"},
-    "ats_optimization": {"score": 85, "feedback": "Good keyword usage"},
-    "impact": {"score": 65, "feedback": "Needs more specific accomplishments"}
-  },
-  "priority_improvements": [
-    "Add metrics to work experience achievements",
-    "Include industry-specific keywords",
-    "Strengthen professional summary"
-  ],
-  "improvement_journey": [
-    {"step": 1, "action": "Quantify achievements", "estimated_time": "2 hours"},
-    {"step": 2, "action": "Optimize keywords", "estimated_time": "1 hour"}
-  ]
-}""",
+            "name": "fairness_guidance",
+            "category": "compliance",
+            "content": """Review candidate selection process for bias and fairness. Ensure diverse representation and equitable evaluation. Provide guidance on reducing unconscious bias.""",
             "variables": {
-                "resume_content": "Full resume text content"
+                "candidate_pool": "All candidates under consideration",
+                "selection_criteria": "Evaluation criteria used"
             },
             "version": 1,
             "is_active": True,
             "metadata": {
-                "description": "Analyzes resume quality and provides improvement suggestions",
-                "output_format": "JSON",
+                "description": "Ensures fair and unbiased candidate evaluation",
+                "output_format": "Text",
                 "estimated_tokens": 1000
             }
         },
         {
-            "name": "recruiter_assistance",
-            "category": "recruiter_assistance",
-            "content": """Assist recruiters with candidate evaluation and hiring decisions.
-
-Context:
-- Job Requirements: {job_requirements}
-- Candidate Profile: {candidate_profile}
-- Interview Notes: {interview_notes}
-- Current Stage: {recruitment_stage}
-
-Provide insights on:
-1. Candidate fit for the role
-2. Potential concerns or red flags
-3. Interview questions to ask next
-4. Comparison with other candidates
-5. Hiring recommendations
-
-Response format:
-{
-  "candidate_fit": {
-    "overall_rating": "Strong Match",
-    "score": 88,
-    "reasoning": "Excellent technical skills and cultural fit"
-  },
-  "concerns": ["Limited experience with specific technology X"],
-  "next_questions": [
-    "Can you describe your experience with technology X?",
-    "How do you handle tight deadlines?"
-  ],
-  "comparison_notes": "Stronger technically than candidate A, better communication than candidate B",
-  "recommendations": {
-    "next_action": "Schedule technical interview",
-    "priority": "High",
-    "timeline": "Within 1 week"
-  }
-}""",
+            "name": "interview_preparation",
+            "category": "interview_planning",
+            "content": """Prepare comprehensive interview plan including questions, evaluation criteria, and assessment framework for top candidates.""",
             "variables": {
-                "job_requirements": "Job description and requirements",
-                "candidate_profile": "Candidate resume and background",
-                "interview_notes": "Previous interview feedback",
-                "recruitment_stage": "Current recruitment stage"
+                "candidates": "Final candidates for interview",
+                "job_requirements": "Key job competencies"
             },
             "version": 1,
+            "is_active": True,
+            "metadata": {
+                "description": "Creates interview preparation plan",
+                "output_format": "JSON",
+                "estimated_tokens": 1500
+            }
+        }
+    ]
+
+    # Insert prompts into database
+    for prompt in prompts:
+        existing = db.prompts.find_one({"name": prompt["name"]})
+        if existing and existing.get("version", 1) < prompt.get("version", 1):
+            db.prompts.update_one(
+                {"name": prompt["name"]},
+                {
+                    "$set": {
+                        **prompt,
+                        "updated_at": datetime.utcnow(),
+                        "updated_by": "system"
+                    }
+                }
+            )
+            print(f"Updated prompt: {prompt['name']}")
+        elif not existing:
+            db.prompts.insert_one(prompt)
+            print(f"Inserted prompt: {prompt['name']}")
+        else:
+            print(f"Prompt {prompt['name']} already up to date")
+
+    print("Prompts seeding completed successfully!")
+
+
+if __name__ == "__main__":
+    seed_prompts()
             "is_active": True,
             "metadata": {
                 "description": "Assists recruiters with candidate evaluation",

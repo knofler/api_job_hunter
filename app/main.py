@@ -45,6 +45,9 @@ db = client.get_database(settings.MONGO_DB_NAME)
 # Seed data during startup
 @app.on_event("startup")
 async def startup_event():
+    # Always seed prompts as they are critical for application functionality
+    seed_prompts()
+
     if not settings.RUN_STARTUP_SEED:
         return
 
@@ -52,7 +55,6 @@ async def startup_event():
     seed_jobs()
     seed_candidate_workflow()
     seed_recruiters()
-    seed_prompts()
 
 # Include your routers
 app.include_router(health.router, prefix="/health")
