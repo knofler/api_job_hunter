@@ -241,7 +241,13 @@ async def list_job_descriptions(*, page: int = 1, page_size: int = 10) -> Dict[s
     )
 
     raw_jobs = await cursor.to_list(length=page_size)
-    serialised = [_serialize_job_document(job) for job in raw_jobs]
+    serialised = []
+    for job in raw_jobs:
+        # Ensure required fields are present with defaults
+        job.setdefault("skills", [])
+        job.setdefault("responsibilities", [])
+        job.setdefault("requirements", [])
+        serialised.append(_serialize_job_document(job))
 
     return {
         "items": serialised,
@@ -301,6 +307,9 @@ async def upload_job_description(
         "is_curated": True,
         "code": code,
         "status": "active",
+        "skills": [],  # Initialize as empty array
+        "responsibilities": [],  # Initialize as empty array
+        "requirements": [],  # Initialize as empty array
         "skills_required": [],  # Will be extracted by AI later
         "location": "",  # Will be extracted by AI later
     }

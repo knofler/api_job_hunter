@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
@@ -46,9 +47,19 @@ async def upload_resume(
     file: UploadFile = File(...),
     resume_type: str = Form(default="general"),
     version: Optional[int] = Form(default=None),
+    summary: Optional[str] = Form(default=None),
+    skills: Optional[str] = Form(default=None),
 ):
     """Upload a resume and extract text content."""
     file_bytes = await file.read()
+
+    # Parse skills if provided
+    parsed_skills = None
+    if skills:
+        try:
+            parsed_skills = json.loads(skills)
+        except json.JSONDecodeError:
+            parsed_skills = []
 
     resume_id = await resume_service.upload_resume(
         user_id=user_id,
@@ -58,6 +69,8 @@ async def upload_resume(
         original_filename=file.filename or name,
         resume_type=resume_type,
         version=version,
+        summary=summary,
+        skills=parsed_skills,
     )
 
     return {"resume_id": resume_id, "message": "Resume uploaded and processed successfully"}

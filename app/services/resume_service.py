@@ -74,6 +74,11 @@ def _serialise_resume(document: Dict[str, Any]) -> Dict[str, Any]:
             "sub_scores": health.get("sub_scores", []),
         }
 
+    # Extract summary and skills from metadata
+    metadata = resume.get("metadata", {})
+    resume["summary"] = metadata.get("summary", "")
+    resume["skills"] = metadata.get("skills", [])
+
     # Remove sensitive fields
     resume.pop("file_blob", None)
     return resume
@@ -106,6 +111,8 @@ async def upload_resume(
     original_filename: str,
     resume_type: str = "general",
     version: Optional[int] = None,
+    summary: Optional[str] = None,
+    skills: Optional[List[str]] = None,
 ) -> str:
     """Upload a resume and extract its text content."""
 
@@ -131,7 +138,10 @@ async def upload_resume(
         "content_type": content_type,
         "uploaded_at": datetime.utcnow(),
         "is_active": True,
-        "metadata": {},
+        "metadata": {
+            "summary": summary,
+            "skills": skills or [],
+        },
     }
 
     result = await db.resumes.insert_one(document)
