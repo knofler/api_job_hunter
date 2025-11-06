@@ -1,6 +1,5 @@
-import asyncio
 import os
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator
 
 import pytest
 import pytest_asyncio
@@ -17,14 +16,6 @@ from app.main import app  # noqa: E402  (import after setting env for settings i
 
 
 @pytest.fixture(scope="session")
-def event_loop() -> Iterator[asyncio.AbstractEventLoop]:
-    """Provide a session-scoped event loop compatible with Motor."""
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest.fixture(scope="session")
 def mongodb_uri() -> str:
     """Provide the Mongo URI for tests; default to docker-compose mapping."""
     return DEFAULT_MONGO_URI
@@ -34,7 +25,7 @@ def mongodb_uri() -> str:
 async def start_app(mongodb_uri: str) -> AsyncIterator[None]:
     # Ensure the application sees the expected Mongo URI before startup hooks run.
     os.environ.setdefault("MONGO_URI", mongodb_uri)
-    database.client = AsyncIOMotorClient(mongodb_uri, io_loop=asyncio.get_event_loop())
+    database.client = AsyncIOMotorClient(mongodb_uri)
     database.db = database.client.get_database(settings.MONGO_DB_NAME)
     await app.router.startup()
     yield

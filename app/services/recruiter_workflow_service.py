@@ -22,6 +22,7 @@ from app.models.recruiter_workflow import (
 from app.services import candidate_service, resume_service
 from app.services.llm_orchestrator import LLMOrchestrator
 from app.services.llm_providers.base import LLMMessage
+from app.services.prompt_service import get_prompt_by_name
 from app.services import llm_settings_service
 
 _SYSTEM_PROMPT = (
@@ -310,11 +311,30 @@ def _resolve_step_configs(
     return configs
 
 
+async def _get_prompt_content(prompt_name: str, fallback_content: str) -> str:
+    """Get prompt content from database, fallback to provided content if not found."""
+    try:
+        prompt = await get_prompt_by_name(prompt_name)
+        if prompt and prompt.get("content"):
+            return prompt["content"]
+    except Exception as e:
+        logger.warning(f"Failed to load prompt '{prompt_name}': {e}")
+    return fallback_content
+
+
 async def _invoke_core_skills(
     orchestrator: LLMOrchestrator,
     config: LLMProviderConfig,
     context_json: str,
 ) -> List[CoreSkill]:
+    instruction = await _get_prompt_content(
+        "core_skills_analysis",
+        "Identify the three most critical must-have skills that determine candidate success. "
+        "Return JSON with key 'core_skills' containing exactly three objects with fields 'name' and 'reason'."
+    )
+    data = await _invoke_json(orchestrator, config, instruction, context_json)
+    core_skills = data.get("core_skills", [])
+    return [CoreSkill(name=item.get("name", ""), reason=item.get("reason", "")) for item in core_skills]
     instruction = (
         "Identify the three most critical must-have skills that determine candidate success."
         " Return JSON with key 'core_skills' containing exactly three objects with fields 'name' and 'reason'."
@@ -329,7 +349,8 @@ async def _invoke_ai_analysis(
     config: LLMProviderConfig,
     context_json: str,
 ) -> Dict[str, object]:
-    instruction = (
+    instruction = await _get_prompt_content(
+        "candidate_analysis",
         "For each candidate, score the fit versus the job. Provide match_score (0-100), bias_free_score (0-100), "
         "a recruiter summary (<= 400 characters), up to three highlights, and a skill_alignment array with fields "
         "'skill', 'status' (Yes/Partial/No), and 'evidence'. Also craft a recruiter-facing markdown summary and "
@@ -385,10 +406,11 @@ async def _invoke_ranked_shortlist(
     config: LLMProviderConfig,
     context_json: str,
 ) -> List[RankedCandidateItem]:
-    instruction = (
-        "Generate a ranked shortlist of candidates."
-        " Return JSON with key 'ranked_shortlist' where each item includes 'candidate_id', 'rank' (1-based),"
-        " 'priority' (Hot/Warm/Pipeline), 'status', 'availability', and 'notes'."
+    instruction = await _get_prompt_content(
+        "ranked_shortlist",
+        "Generate a ranked shortlist of candidates. "
+        "Return JSON with key 'ranked_shortlist' where each item includes 'candidate_id', 'rank' (1-based), "
+        "'priority' (Hot/Warm/Pipeline), 'status', 'availability', and 'notes'."
     )
     data = await _invoke_json(orchestrator, config, instruction, context_json)
     shortlist_payload = data.get("ranked_shortlist", [])
@@ -413,10 +435,11 @@ async def _invoke_detailed_readout(
     config: LLMProviderConfig,
     context_json: str,
 ) -> List[CandidateReadout]:
-    instruction = (
-        "Create a detailed readout for each candidate."
-        " Return JSON with key 'detailed_readout' of objects that include 'candidate_id',"
-        " 'strengths' (list of strings), 'risks' (list of strings), and 'recommended_actions' (list of strings)."
+    instruction = await _get_prompt_content(
+        "detailed_readout",
+        "Create a detailed readout for each candidate. "
+        "Return JSON with key 'detailed_readout' of objects that include 'candidate_id', "
+        "'strengths' (list of strings), 'risks' (list of strings), and 'recommended_actions' (list of strings)."
     )
     data = await _invoke_json(orchestrator, config, instruction, context_json)
     readout_payload = data.get("detailed_readout", [])
@@ -438,9 +461,10 @@ async def _invoke_engagement_plan(
     config: LLMProviderConfig,
     context_json: str,
 ) -> List[InsightItem]:
-    instruction = (
-        "Propose an engagement plan for stakeholders."
-        " Return JSON with key 'engagement_plan' where every item has 'label', 'value', and optional 'helper'."
+    instruction = await _get_prompt_content(
+        "engagement_plan",
+        "Propose an engagement plan for stakeholders. "
+        "Return JSON with key 'engagement_plan' where every item has 'label', 'value', and optional 'helper'."
     )
     data = await _invoke_json(orchestrator, config, instruction, context_json)
     plan_payload = data.get("engagement_plan", [])
@@ -459,9 +483,10 @@ async def _invoke_fairness_guidance(
     config: LLMProviderConfig,
     context_json: str,
 ) -> List[InsightItem]:
-    instruction = (
-        "Highlight fairness, bias mitigation, and panel guidance actions."
-        " Return JSON with key 'fairness_guidance' where each item includes 'label', 'value', and optional 'helper'."
+    instruction = await _get_prompt_content(
+        "fairness_guidance",
+        "Highlight fairness, bias mitigation, and panel guidance actions. "
+        "Return JSON with key 'fairness_guidance' where each item includes 'label', 'value', and optional 'helper'."
     )
     data = await _invoke_json(orchestrator, config, instruction, context_json)
     fairness_payload = data.get("fairness_guidance", [])
@@ -480,9 +505,10 @@ async def _invoke_interview_pack(
     config: LLMProviderConfig,
     context_json: str,
 ) -> List[InterviewQuestion]:
-    instruction = (
-        "Generate interview preparation pack questions focused on validating must-have skills and risks."
-        " Return JSON with key 'interview_preparation' where each item has 'question' and 'rationale'."
+    instruction = await _get_prompt_content(
+        "interview_preparation",
+        "Generate interview preparation pack questions focused on validating must-have skills and risks. "
+        "Return JSON with key 'interview_preparation' where each item has 'question' and 'rationale'."
     )
     data = await _invoke_json(orchestrator, config, instruction, context_json)
     questions_payload = data.get("interview_preparation", [])

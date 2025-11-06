@@ -8,7 +8,6 @@ from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
 from app.models.chat_model import ChatRequest
-from app.models.llm_model import LLMProviderConfig
 from app.services import chat_service, llm_settings_service
 from app.services.llm_orchestrator import LLMOrchestrator
 from app.services.llm_providers.base import LLMMessage

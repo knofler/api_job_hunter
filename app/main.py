@@ -17,11 +17,13 @@ from app.api.routes import (
     admin_llm,
     admin_orgs,
     chat,
+    prompts,
 )
 from scripts.seed_candidate_workflow import seed_candidate_workflow
 from scripts.seed_jobs import seed_jobs
 from scripts.seed_recruiters import seed_recruiters
 from scripts.seed_users import seed_users
+from scripts.seed_prompts import seed_prompts
 
 app = FastAPI()
 
@@ -50,6 +52,7 @@ async def startup_event():
     seed_jobs()
     seed_candidate_workflow()
     seed_recruiters()
+    seed_prompts()
 
 # Include your routers
 app.include_router(health.router, prefix="/health")
@@ -65,5 +68,4 @@ app.include_router(recruiter_workflow.router)
 app.include_router(admin_llm.router)
 app.include_router(admin_orgs.router)
 app.include_router(chat.router)
-app.include_router(recruiter_workflow.router)
-app.include_router(admin_llm.router)
+app.include_router(prompts.router, prefix="/prompts")

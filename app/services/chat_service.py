@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Dict, Optional
-from uuid import uuid4
 
 from app.core.database import db
-from app.models.chat_model import ChatMessage, ChatRequest, ChatSessionState
+from app.models.chat_model import ChatMessage, ChatSessionState
 
 _sessions = db.chat_sessions
 

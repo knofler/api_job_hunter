@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Path, Query, status
+from fastapi import APIRouter, HTTPException, Path, Query
 
 from app.api.dependencies import AdminDependency
 from app.models.org_model import Org, OrgCreate, OrgMember, OrgUpdate

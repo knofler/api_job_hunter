@@ -1,4 +1,4 @@
-set shell := ["/bin/zsh", "-c"]
+set shell := ["/bin/bash", "-c"]
 
 export PYTHONPATH := "app"
 
@@ -23,7 +23,7 @@ lint:
 
 # Run test suite
 pytest:
-	python3 -m pytest
+	python3 -m pytest --asyncio-mode=auto
 
 # Aggregate lint + tests
 verify: lint pytest

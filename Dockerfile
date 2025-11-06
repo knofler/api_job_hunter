@@ -7,12 +7,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 RUN apt-get update \
-	&& apt-get install --no-install-recommends -y build-essential \
+	&& apt-get install --no-install-recommends -y build-essential curl \
+	&& curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin \
 	&& rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt ./
+COPY requirements.txt requirements.dev.txt ./
 RUN pip install --upgrade pip \
-	&& pip install --no-cache-dir -r requirements.txt
+	&& pip install --no-cache-dir -r requirements.txt \
+	&& pip install --no-cache-dir -r requirements.dev.txt
 
 COPY app ./app
 COPY scripts ./scripts

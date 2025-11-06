@@ -1,12 +1,55 @@
 from __future__ import annotations
 
+import io
 from datetime import datetime
 from typing import Any, Dict, Iterable, List, Optional
 
 from bson import ObjectId
+from PyPDF2 import PdfReader
+import docx
 
 from app.core.database import db
 from app.services.ranking_service import calculate_ranking
+
+
+def _extract_text_from_pdf(file_bytes: bytes) -> str:
+    """Extract text content from PDF file."""
+    try:
+        pdf_reader = PdfReader(io.BytesIO(file_bytes))
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text() + "\n"
+        return text.strip()
+    except Exception:
+        return ""
+
+
+def _extract_text_from_docx(file_bytes: bytes) -> str:
+    """Extract text content from DOCX file."""
+    try:
+        doc = docx.Document(io.BytesIO(file_bytes))
+        text = ""
+        for paragraph in doc.paragraphs:
+            text += paragraph.text + "\n"
+        return text.strip()
+    except Exception:
+        return ""
+
+
+def _extract_text_from_file(file_bytes: bytes, content_type: str, filename: str) -> str:
+    """Extract text content from uploaded file based on type."""
+    filename_lower = filename.lower()
+
+    if content_type == "application/pdf" or filename_lower.endswith(".pdf"):
+        return _extract_text_from_pdf(file_bytes)
+    elif content_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document" or filename_lower.endswith((".docx", ".doc")):
+        return _extract_text_from_docx(file_bytes)
+    else:
+        # For other file types, try to decode as text
+        try:
+            return file_bytes.decode('utf-8')
+        except UnicodeDecodeError:
+            return ""
 
 
 def _serialize_job_document(document: Dict[str, Any]) -> Dict[str, Any]:
@@ -223,3 +266,100 @@ async def update_job_description(job_id: str, update_data: Dict[str, Any]) -> Op
         return _serialize_job_document(updated_job) if updated_job else None
 
     return None
+
+
+async def upload_job_description(
+    *,
+    recruiter_id: str,
+    title: str,
+    file_bytes: bytes,
+    content_type: str,
+    original_filename: str,
+    company: Optional[str] = None,
+    budget: Optional[str] = None,
+    job_brief: Optional[str] = None,
+    additional_details: Optional[Dict[str, Any]] = None,
+) -> str:
+    """Upload a job description and extract its text content."""
+
+    # Extract text content from the file
+    jd_content = _extract_text_from_file(file_bytes, content_type, original_filename)
+
+    # Generate a unique code for the job
+    code = f"REQ-{datetime.utcnow().strftime('%Y%m%d')}-{str(ObjectId())[:6].upper()}"
+
+    document: Dict[str, Any] = {
+        "title": title,
+        "company": company,
+        "budget": budget,
+        "job_brief": job_brief,
+        "jd_content": jd_content,
+        "jd_filename": original_filename,
+        "additional_details": additional_details or {},
+        "uploaded_by": recruiter_id,
+        "uploaded_at": datetime.utcnow(),
+        "is_curated": True,
+        "code": code,
+        "status": "active",
+        "skills_required": [],  # Will be extracted by AI later
+        "location": "",  # Will be extracted by AI later
+    }
+
+    result = await db.jobs.insert_one(document)
+    return str(result.inserted_id)
+
+
+async def get_jobs_by_recruiter(recruiter_id: str, page: int = 1, page_size: int = 25) -> Dict[str, Any]:
+    """Get all jobs uploaded by a specific recruiter."""
+    page = max(page, 1)
+    page_size = max(1, min(page_size, 100))
+    skip = (page - 1) * page_size
+
+    query = {"uploaded_by": recruiter_id}
+
+    total = await db.jobs.count_documents(query)
+
+    cursor = (
+        db.jobs.find(query)
+        .sort("uploaded_at", -1)
+        .skip(skip)
+        .limit(page_size)
+    )
+
+    raw_jobs = await cursor.to_list(length=page_size)
+    serialised = [_serialize_job_document(job) for job in raw_jobs]
+
+    return {
+        "items": serialised,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }
+
+
+async def get_jobs_by_company(company: str, page: int = 1, page_size: int = 25) -> Dict[str, Any]:
+    """Get all jobs for a specific company."""
+    page = max(page, 1)
+    page_size = max(1, min(page_size, 100))
+    skip = (page - 1) * page_size
+
+    query = {"company": {"$regex": company, "$options": "i"}}
+
+    total = await db.jobs.count_documents(query)
+
+    cursor = (
+        db.jobs.find(query)
+        .sort("uploaded_at", -1)
+        .skip(skip)
+        .limit(page_size)
+    )
+
+    raw_jobs = await cursor.to_list(length=page_size)
+    serialised = [_serialize_job_document(job) for job in raw_jobs]
+
+    return {
+        "items": serialised,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }
