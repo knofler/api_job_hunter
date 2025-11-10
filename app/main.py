@@ -46,6 +46,15 @@ db = client.get_database(settings.MONGO_DB_NAME)
 @app.on_event("startup")
 async def startup_event():
     print("Starting application startup...")
+    print(f"MONGO_URI: {settings.MONGO_URI}")
+    print(f"MONGO_DB_NAME: {settings.MONGO_DB_NAME}")
+    
+    # Test database connection
+    try:
+        db.command('ping')
+        print("Database connection successful")
+    except Exception as e:
+        print(f"Database connection failed: {e}")
 
     if not settings.RUN_STARTUP_SEED:
         print("Skipping all seeding (RUN_STARTUP_SEED=false)")

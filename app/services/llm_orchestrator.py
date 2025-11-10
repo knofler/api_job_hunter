@@ -26,7 +26,7 @@ class LLMOrchestrator:
             "bedrock": BedrockProvider(),
         }
 
-    async def generate(self, messages: Iterable[LLMMessage], config: LLMProviderConfig) -> str:
+    async def generate(self, messages: Iterable[LLMMessage], config: LLMProviderConfig, response_format: str = "json") -> str:
         hydrated = self._hydrate_config(config)
         provider = self._providers.get(hydrated.provider)
         if provider is None:
@@ -41,7 +41,7 @@ class LLMOrchestrator:
             temperature=hydrated.temperature if hydrated.temperature is not None else _DEFAULT_TEMPERATURE,
             extra_headers=hydrated.extra_headers,
             extra_payload=hydrated.extra_payload,
-            response_format="json",
+            response_format=response_format,
         )
 
         if not request.api_key and hydrated.provider not in {"bedrock"}:
@@ -51,7 +51,7 @@ class LLMOrchestrator:
 
         return await provider.generate(request)
 
-    async def generate_stream(self, messages: Iterable[LLMMessage], config: LLMProviderConfig):
+    async def generate_stream(self, messages: Iterable[LLMMessage], config: LLMProviderConfig, response_format: str = "json"):
         """Generate content with streaming support (token by token)."""
         hydrated = self._hydrate_config(config)
         provider = self._providers.get(hydrated.provider)
@@ -67,7 +67,7 @@ class LLMOrchestrator:
             temperature=hydrated.temperature if hydrated.temperature is not None else _DEFAULT_TEMPERATURE,
             extra_headers=hydrated.extra_headers,
             extra_payload=hydrated.extra_payload,
-            response_format="json",
+            response_format=response_format,
         )
 
         if not request.api_key and hydrated.provider not in {"bedrock"}:

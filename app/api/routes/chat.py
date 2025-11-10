@@ -78,7 +78,7 @@ async def chat_stream(payload: ChatRequest) -> StreamingResponse:
             orchestrator = LLMOrchestrator()
             accumulated = ""
             
-            async for chunk in orchestrator.generate_stream(messages, config):
+            async for chunk in orchestrator.generate_stream(messages, config, response_format="text"):
                 accumulated += chunk
                 yield f"data: {json.dumps({'type': 'chunk', 'content': chunk})}\n\n"
             

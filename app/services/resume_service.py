@@ -74,10 +74,14 @@ def _serialise_resume(document: Dict[str, Any]) -> Dict[str, Any]:
             "sub_scores": health.get("sub_scores", []),
         }
 
-    # Extract summary and skills from metadata
-    metadata = resume.get("metadata", {})
-    resume["summary"] = metadata.get("summary", "")
-    resume["skills"] = metadata.get("skills", [])
+    # For seeded resumes, summary and skills are direct fields
+    # For uploaded resumes, they come from metadata
+    if "summary" not in resume:
+        metadata = resume.get("metadata", {})
+        resume["summary"] = metadata.get("summary", "")
+    if "skills" not in resume:
+        metadata = resume.get("metadata", {})
+        resume["skills"] = metadata.get("skills", [])
 
     # Remove sensitive fields
     resume.pop("file_blob", None)
@@ -86,7 +90,13 @@ def _serialise_resume(document: Dict[str, Any]) -> Dict[str, Any]:
 
 async def get_resumes(user_id: str) -> List[Dict[str, Any]]:
     """Get all resumes for a user."""
-    cursor = db.resumes.find({"user_id": user_id, "is_active": True}).sort("uploaded_at", -1)
+    cursor = db.resumes.find({
+        "candidate_id": user_id,
+        "$or": [
+            {"is_active": True},
+            {"is_active": {"$exists": False}}
+        ]
+    }).sort("last_updated", -1)
     documents = await cursor.to_list(length=100)
     return [_serialise_resume(document) for document in documents]
 
@@ -98,8 +108,16 @@ async def get_resume(resume_id: str) -> Optional[Dict[str, Any]]:
     except Exception:
         return None
 
-    document = await db.resumes.find_one({"_id": object_id, "is_active": True})
-    return _serialise_resume(document) if document else None
+    document = await db.resumes.find_one({"_id": object_id})
+    if not document:
+        return None
+
+    # For uploaded resumes, check is_active; for seeded resumes (no is_active field), consider them active
+    is_active = document.get("is_active", True)
+    if not is_active:
+        return None
+
+    return _serialise_resume(document)
 
 
 async def upload_resume(
@@ -177,8 +195,14 @@ async def delete_resume(resume_id: str) -> bool:
 
 async def get_resume_versions(user_id: str, resume_type: str = "general") -> List[Dict[str, Any]]:
     """Get all versions of a specific resume type for a user."""
-    cursor = db.resumes.find(
-        {"user_id": user_id, "resume_type": resume_type, "is_active": True}
-    ).sort("version", -1)
+    # For uploaded resumes, check is_active; for seeded resumes, include them
+    cursor = db.resumes.find({
+        "user_id": user_id,
+        "resume_type": resume_type,
+        "$or": [
+            {"is_active": True},
+            {"is_active": {"$exists": False}}
+        ]
+    }).sort("version", -1)
     documents = await cursor.to_list(length=50)
     return [_serialise_resume(document) for document in documents]

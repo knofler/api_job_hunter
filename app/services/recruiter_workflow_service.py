@@ -335,13 +335,6 @@ async def _invoke_core_skills(
     data = await _invoke_json(orchestrator, config, instruction, context_json)
     core_skills = data.get("core_skills", [])
     return [CoreSkill(name=item.get("name", ""), reason=item.get("reason", "")) for item in core_skills]
-    instruction = (
-        "Identify the three most critical must-have skills that determine candidate success."
-        " Return JSON with key 'core_skills' containing exactly three objects with fields 'name' and 'reason'."
-    )
-    data = await _invoke_json(orchestrator, config, instruction, context_json)
-    core_skills = data.get("core_skills", [])
-    return [CoreSkill(name=item.get("name", ""), reason=item.get("reason", "")) for item in core_skills]
 
 
 async def _invoke_ai_analysis(
