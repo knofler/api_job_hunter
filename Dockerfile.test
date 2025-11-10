@@ -1,0 +1,30 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+	PYTHONUNBUFFERED=1 \
+	PORT=8080
+
+WORKDIR /app
+
+RUN apt-get update \
+	&& apt-get install --no-install-recommends -y build-essential curl \
+	&& curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin \
+	&& rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt requirements.dev.txt ./
+RUN pip install --upgrade pip \
+	&& pip install --no-cache-dir -r requirements.txt \
+	&& pip install --no-cache-dir -r requirements.dev.txt
+
+COPY app ./app
+COPY scripts ./scripts
+COPY models ./models
+
+# Copy test files
+COPY app/tests ./app/tests
+COPY conftest.py ./
+
+EXPOSE 8080
+
+# Default command for testing
+CMD ["python", "-m", "pytest", "app/tests/", "-v", "--tb=short", "--strict-markers"]

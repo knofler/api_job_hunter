@@ -225,6 +225,7 @@ async def list_job_descriptions(*, page: int = 1, page_size: int = 10) -> Dict[s
             "title": 1,
             "company": 1,
             "description": 1,
+            "jd_content": 1,
             "responsibilities": 1,
             "requirements": 1,
             "skills": 1,
@@ -247,6 +248,11 @@ async def list_job_descriptions(*, page: int = 1, page_size: int = 10) -> Dict[s
         job.setdefault("skills", [])
         job.setdefault("responsibilities", [])
         job.setdefault("requirements", [])
+        
+        # If description is missing but jd_content exists, use jd_content as description
+        if not job.get("description") and job.get("jd_content"):
+            job["description"] = job["jd_content"][:500]  # Use first 500 chars of jd_content
+        
         serialised.append(_serialize_job_document(job))
 
     return {

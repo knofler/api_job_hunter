@@ -407,18 +407,28 @@ async def _invoke_ranked_shortlist(
     )
     data = await _invoke_json(orchestrator, config, instruction, context_json)
     shortlist_payload = data.get("ranked_shortlist", [])
+    if isinstance(shortlist_payload, str):
+        # Some LLM responses double-encode JSON arrays; attempt to decode before proceeding.
+        try:
+            shortlist_payload = json.loads(shortlist_payload)
+        except json.JSONDecodeError as exc:  # noqa: PERF203
+            raise RuntimeError("LLM response returned string for ranked_shortlist; expected JSON array") from exc
+    if not isinstance(shortlist_payload, list):
+        logger.warning("LLM ranked_shortlist payload malformed: %r", shortlist_payload)
+        raise RuntimeError("LLM response returned invalid ranked_shortlist payload; expected list of objects")
     shortlist: List[RankedCandidateItem] = []
     for item in shortlist_payload:
-        shortlist.append(
-            RankedCandidateItem(
-                candidate_id=item.get("candidate_id", ""),
-                rank=item.get("rank", 0),
-                priority=item.get("priority"),
-                status=item.get("status"),
-                availability=item.get("availability"),
-                notes=item.get("notes"),
+        if isinstance(item, dict):
+            shortlist.append(
+                RankedCandidateItem(
+                    candidate_id=item.get("candidate_id", ""),
+                    rank=item.get("rank", 0),
+                    priority=item.get("priority"),
+                    status=item.get("status"),
+                    availability=item.get("availability"),
+                    notes=item.get("notes"),
+                )
             )
-        )
     shortlist.sort(key=lambda entry: entry.rank or 0)
     return shortlist
 
@@ -436,16 +446,26 @@ async def _invoke_detailed_readout(
     )
     data = await _invoke_json(orchestrator, config, instruction, context_json)
     readout_payload = data.get("detailed_readout", [])
+    if isinstance(readout_payload, str):
+        # Some LLM responses double-encode JSON arrays; attempt to decode before proceeding.
+        try:
+            readout_payload = json.loads(readout_payload)
+        except json.JSONDecodeError as exc:  # noqa: PERF203
+            raise RuntimeError("LLM response returned string for detailed_readout; expected JSON array") from exc
+    if not isinstance(readout_payload, list):
+        logger.warning("LLM detailed_readout payload malformed: %r", readout_payload)
+        raise RuntimeError("LLM response returned invalid detailed_readout payload; expected list of objects")
     readout: List[CandidateReadout] = []
     for item in readout_payload:
-        readout.append(
-            CandidateReadout(
-                candidate_id=item.get("candidate_id", ""),
-                strengths=item.get("strengths", []),
-                risks=item.get("risks", []),
-                recommended_actions=item.get("recommended_actions", []),
+        if isinstance(item, dict):
+            readout.append(
+                CandidateReadout(
+                    candidate_id=item.get("candidate_id", ""),
+                    strengths=item.get("strengths", []),
+                    risks=item.get("risks", []),
+                    recommended_actions=item.get("recommended_actions", []),
+                )
             )
-        )
     return readout
 
 
@@ -461,6 +481,15 @@ async def _invoke_engagement_plan(
     )
     data = await _invoke_json(orchestrator, config, instruction, context_json)
     plan_payload = data.get("engagement_plan", [])
+    if isinstance(plan_payload, str):
+        # Some LLM responses double-encode JSON arrays; attempt to decode before proceeding.
+        try:
+            plan_payload = json.loads(plan_payload)
+        except json.JSONDecodeError as exc:  # noqa: PERF203
+            raise RuntimeError("LLM response returned string for engagement_plan; expected JSON array") from exc
+    if not isinstance(plan_payload, list):
+        logger.warning("LLM engagement_plan payload malformed: %r", plan_payload)
+        raise RuntimeError("LLM response returned invalid engagement_plan payload; expected list of objects")
     return [
         InsightItem(
             label=item.get("label", ""),
@@ -468,6 +497,7 @@ async def _invoke_engagement_plan(
             helper=item.get("helper"),
         )
         for item in plan_payload
+        if isinstance(item, dict)
     ]
 
 
@@ -483,6 +513,15 @@ async def _invoke_fairness_guidance(
     )
     data = await _invoke_json(orchestrator, config, instruction, context_json)
     fairness_payload = data.get("fairness_guidance", [])
+    if isinstance(fairness_payload, str):
+        # Some LLM responses double-encode JSON arrays; attempt to decode before proceeding.
+        try:
+            fairness_payload = json.loads(fairness_payload)
+        except json.JSONDecodeError as exc:  # noqa: PERF203
+            raise RuntimeError("LLM response returned string for fairness_guidance; expected JSON array") from exc
+    if not isinstance(fairness_payload, list):
+        logger.warning("LLM fairness_guidance payload malformed: %r", fairness_payload)
+        raise RuntimeError("LLM response returned invalid fairness_guidance payload; expected list of objects")
     return [
         InsightItem(
             label=item.get("label", ""),
@@ -490,6 +529,7 @@ async def _invoke_fairness_guidance(
             helper=item.get("helper"),
         )
         for item in fairness_payload
+        if isinstance(item, dict)
     ]
 
 
@@ -505,12 +545,22 @@ async def _invoke_interview_pack(
     )
     data = await _invoke_json(orchestrator, config, instruction, context_json)
     questions_payload = data.get("interview_preparation", [])
+    if isinstance(questions_payload, str):
+        # Some LLM responses double-encode JSON arrays; attempt to decode before proceeding.
+        try:
+            questions_payload = json.loads(questions_payload)
+        except json.JSONDecodeError as exc:  # noqa: PERF203
+            raise RuntimeError("LLM response returned string for interview_preparation; expected JSON array") from exc
+    if not isinstance(questions_payload, list):
+        logger.warning("LLM interview_preparation payload malformed: %r", questions_payload)
+        raise RuntimeError("LLM response returned invalid interview_preparation payload; expected list of objects")
     return [
         InterviewQuestion(
             question=item.get("question", ""),
             rationale=item.get("rationale", ""),
         )
         for item in questions_payload
+        if isinstance(item, dict)
     ]
 
 

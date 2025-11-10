@@ -1,7 +1,7 @@
 import pytest
 from httpx import AsyncClient
 
-pytestmark = pytest.mark.asyncio(loop_scope="session")
+pytestmark = pytest.mark.anyio
 
 
 async def test_list_candidates_paginates(async_client: AsyncClient):

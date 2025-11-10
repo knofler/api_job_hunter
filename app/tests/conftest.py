@@ -21,7 +21,7 @@ def mongodb_uri() -> str:
     return DEFAULT_MONGO_URI
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
+@pytest_asyncio.fixture(scope="function", autouse=True)
 async def start_app(mongodb_uri: str) -> AsyncIterator[None]:
     # Ensure the application sees the expected Mongo URI before startup hooks run.
     os.environ.setdefault("MONGO_URI", mongodb_uri)
@@ -33,7 +33,7 @@ async def start_app(mongodb_uri: str) -> AsyncIterator[None]:
     database.client.close()
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def async_client(mongodb_uri: str) -> AsyncIterator[AsyncClient]:
     async with AsyncClient(app=app, base_url="http://testserver") as client:
         yield client
