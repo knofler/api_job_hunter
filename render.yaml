@@ -11,3 +11,5 @@ services:
     envVars:
       - key: PORT
         value: "8080"
+      - key: RUN_STARTUP_SEED
+        value: "false"

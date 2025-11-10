@@ -2,13 +2,12 @@ import os
 from datetime import datetime
 from pymongo import MongoClient
 
-def seed_prompts(db=None):
+def seed_prompts():
     """Seed the prompts collection with initial AI prompts for the application."""
-    if db is None:
-        mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/jobhunter-app")
-        mongo_db = os.getenv("MONGO_DB_NAME", "jobhunter-app")
-        client = MongoClient(mongo_uri)
-        db = client.get_database(mongo_db)
+    mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/jobhunter-app")
+    mongo_db = os.getenv("MONGO_DB_NAME", "jobhunter-app")
+    client = MongoClient(mongo_uri)
+    db = client.get_database(mongo_db)
 
     # Initial prompts for different AI functionalities
     prompts = [
@@ -166,24 +165,19 @@ Return JSON with key 'core_skills' containing objects with fields 'name' and 're
 
     # Insert prompts into database
     for prompt in prompts:
-        existing = db.prompts.find_one({"name": prompt["name"]})
-        if existing and existing.get("version", 1) < prompt.get("version", 1):
-            db.prompts.update_one(
+        try:
+            # Upsert based on name to prevent duplicates
+            result = db.prompts.update_one(
                 {"name": prompt["name"]},
-                {
-                    "$set": {
-                        **prompt,
-                        "updated_at": datetime.utcnow(),
-                        "updated_by": "system"
-                    }
-                }
+                {"$set": prompt},
+                upsert=True
             )
-            print(f"Updated prompt: {prompt['name']}")
-        elif not existing:
-            db.prompts.insert_one(prompt)
-            print(f"Inserted prompt: {prompt['name']}")
-        else:
-            print(f"Prompt {prompt['name']} already up to date")
+            if result.upserted_id:
+                print(f"Inserted prompt: {prompt['name']}")
+            else:
+                print(f"Updated existing prompt: {prompt['name']}")
+        except Exception as e:
+            print(f"Error upserting prompt {prompt['name']}: {e}")
 
     print("Prompts seeding completed successfully!")
 

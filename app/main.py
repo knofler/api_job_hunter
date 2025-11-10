@@ -46,14 +46,25 @@ db = client.get_database(settings.MONGO_DB_NAME)
 @app.on_event("startup")
 async def startup_event():
     print("Starting application startup...")
-    # Always seed prompts as they are critical for application functionality
-    print("Seeding prompts...")
-    seed_prompts(db)
-    print("Prompts seeded successfully")
 
     if not settings.RUN_STARTUP_SEED:
-        print("Skipping other seeding (RUN_STARTUP_SEED=false)")
+        print("Skipping all seeding (RUN_STARTUP_SEED=false)")
         return
+
+    # Safety check: don't seed if database already has significant data
+    # This prevents accidental data loss in production
+    user_count = db.users.count_documents({})
+    job_count = db.jobs.count_documents({})
+
+    if user_count > 10 or job_count > 10:  # Arbitrary threshold for "production" data
+        print(f"Database already has data ({user_count} users, {job_count} jobs). Skipping seeding to prevent data loss.")
+        print("To force seeding, set RUN_STARTUP_SEED=true and restart, but be aware this will overwrite data.")
+        return
+
+    # Seed prompts first as they are critical for application functionality
+    print("Seeding prompts...")
+    seed_prompts()
+    print("Prompts seeded successfully")
 
     print("Seeding other data...")
     seed_users()
@@ -76,4 +87,4 @@ app.include_router(recruiter_workflow.router)
 app.include_router(admin_llm.router)
 app.include_router(admin_orgs.router)
 app.include_router(chat.router)
-app.include_router(prompts.router, prefix="/prompts")
+app.include_router(prompts.router)

@@ -51,14 +51,37 @@ settings API:
 Admins can update provider configurations (including per-step overrides) via `PUT /admin/llm/settings`. To inspect
 available providers use `GET /admin/llm/providers`.
 
-## Testing
-Run the pytest suite from the repository root:
+## Data Seeding
+
+The application seeds initial data on startup when `RUN_STARTUP_SEED=true`. This includes:
+
+- AI prompts (critical for functionality)
+- Demo users and jobs (for testing)
+- Candidate workflow data
+
+### Safety Measures
+
+- **Production Protection**: Seeding is disabled by default in production deployments
+- **Data Loss Prevention**: If the database already contains significant data (>10 users/jobs), seeding is automatically skipped
+- **Development**: Set `RUN_STARTUP_SEED=true` in `.env` for local development
+
+### Environment Variables
+
 ```bash
-cd ai-matching-job-api
-pip install -r requirements.txt
-pip install -r requirements.dev.txt
-pytest
+# Development (enable seeding)
+RUN_STARTUP_SEED=true
+
+# Production (disable seeding to prevent data loss)
+RUN_STARTUP_SEED=false
 ```
+
+### Manual Seeding
+
+To manually seed data in production (for initial deployment):
+
+1. Set `RUN_STARTUP_SEED=true` temporarily
+2. Restart the application
+3. Immediately set `RUN_STARTUP_SEED=false` after seeding completes
 
 ## Deploying to Fly.io
 1. Create a Fly.io app in the `syd` region and note the app name.

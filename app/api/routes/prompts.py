@@ -13,10 +13,10 @@ from app.services.prompt_service import (
 from app.models.prompt_model import PromptCreate, PromptUpdate
 from app.api.dependencies import AdminDependency
 
-router = APIRouter()
+router = APIRouter(prefix="/api/admin/prompts", tags=["admin-prompts"], dependencies=[AdminDependency])
 
 
-@router.get("/")
+@router.get("")
 async def get_prompts(
     category: Optional[str] = None,
     limit: int = 100,
@@ -54,7 +54,7 @@ async def get_prompt_by_name_endpoint(
     return {"prompt": prompt}
 
 
-@router.post("/")
+@router.post("")
 async def create_new_prompt(
     prompt_data: PromptCreate,
     current_user: dict = AdminDependency

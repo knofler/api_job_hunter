@@ -10,6 +10,7 @@ kill_timeout = "5s"
 
 [env]
   PORT = "8080"
+  RUN_STARTUP_SEED = "false"
 
 [http_service]
   internal_port = 8080
