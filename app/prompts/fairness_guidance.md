@@ -46,3 +46,39 @@ Provide comprehensive fairness assessment with:
 - Implement blind review processes where appropriate
 - Provide training and awareness for hiring team members
 - Establish accountability measures for fairness commitments
+
+## REQUIRED JSON OUTPUT FORMAT
+Return ONLY a JSON object with one of these exact structures:
+
+**Option 1 - Standard format:**
+```json
+{
+  "fairness_guidance": [
+    {
+      "label": "Bias Mitigation Strategy",
+      "value": "Implement blind resume review process to reduce unconscious bias...",
+      "helper": "Optional explanation or additional context"
+    }
+  ]
+}
+```
+
+**Option 2 - Alternative format:**
+```json
+{
+  "fairness": [
+    {
+      "label": "Diversity Monitoring",
+      "value": "Track candidate demographics and selection rates by group...",
+      "helper": "Optional explanation"
+    }
+  ]
+}
+```
+
+Each item in the array MUST have:
+- `label`: A descriptive title (string)
+- `value`: The detailed guidance or strategy (string)
+- `helper`: Optional additional explanation or context (string, can be null)
+
+Do not include any markdown formatting, code blocks, or additional text. Return only the JSON object.

@@ -30,11 +30,22 @@ class DeepSeekProvider(LLMProvider):
         if response.status_code == 401:
             raise ProviderNotConfiguredError("Invalid DeepSeek API key provided")
 
+        if response.status_code == 400 and request.response_format == "json":
+            # Retry without JSON mode for models that do not support response_format.
+            fallback_payload = self._build_payload(request, force_text=True)
+            async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
+                retry_response = await client.post(url, headers=headers, json=fallback_payload)
+            retry_response.raise_for_status()
+            return self._extract_text(retry_response.json())
+
         response.raise_for_status()
         data = response.json()
+
+        if request.response_format == "json":
+            return self._extract_json(data)
         return self._extract_text(data)
 
-    def _build_payload(self, request: LLMRequest) -> Dict[str, Any]:
+    def _build_payload(self, request: LLMRequest, *, force_text: bool = False) -> Dict[str, Any]:
         payload: Dict[str, Any] = {
             "model": request.model,
             "messages": [
@@ -44,6 +55,8 @@ class DeepSeekProvider(LLMProvider):
         }
         if request.max_tokens is not None:
             payload["max_tokens"] = request.max_tokens
+        if request.response_format == "json" and not force_text:
+            payload["response_format"] = {"type": "json_object"}
         if request.extra_payload:
             payload.update(request.extra_payload)
         return payload
@@ -54,8 +67,18 @@ class DeepSeekProvider(LLMProvider):
             raise RuntimeError("DeepSeek response missing choices")
         message = choices[0].get("message", {})
         content = message.get("content")
-        if not content:
+        if content is None:
             raise RuntimeError("DeepSeek response missing message content")
+        return str(content)
+
+    def _extract_json(self, data: Dict[str, Any]) -> str:
+        choices = data.get("choices", [])
+        if not choices:
+            raise RuntimeError("DeepSeek response missing choices")
+        message = choices[0].get("message", {})
+        content = message.get("content")
+        if not content:
+            raise RuntimeError("DeepSeek response missing JSON content")
         return content
 
     async def generate_stream(self, request: LLMRequest) -> AsyncGenerator[str, None]:

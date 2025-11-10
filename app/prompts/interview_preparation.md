@@ -47,3 +47,26 @@ Provide complete interview package with:
 - Ensure questions are legally compliant and non-discriminatory
 - Test questions for clarity and effectiveness before use
 - Provide interviewer training notes for consistent application
+
+## REQUIRED JSON OUTPUT FORMAT
+Return ONLY a JSON object with this exact structure:
+```json
+{
+  "interview_preparation": [
+    {
+      "question": "Tell me about a time when you had to solve a complex technical problem under tight deadline.",
+      "rationale": "Assesses problem-solving skills, technical expertise, and ability to work under pressure."
+    },
+    {
+      "question": "How do you approach learning new technologies or frameworks?",
+      "rationale": "Evaluates learning agility and continuous improvement mindset."
+    }
+  ]
+}
+```
+
+Each item in the interview_preparation array MUST have:
+- `question`: The interview question text (string)
+- `rationale`: The reason for asking this question and what it assesses (string)
+
+Do not include any markdown formatting, code blocks, or additional text. Return only the JSON object.

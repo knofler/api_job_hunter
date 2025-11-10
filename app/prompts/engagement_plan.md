@@ -46,3 +46,38 @@ Provide actionable engagement plan with:
 - Adapt strategy based on candidate responses and feedback
 - Coordinate with hiring team for consistent messaging
 - Track engagement metrics and adjust approach accordingly
+
+## REQUIRED JSON OUTPUT FORMAT
+Return ONLY a JSON object with one of these exact structures:
+
+**Option 1 - Standard format:**
+```json
+{
+  "engagement_plan": [
+    {
+      "label": "Communication Timeline",
+      "value": "Day 1: Initial contact via email, Day 3: Follow-up call...",
+      "helper": "Optional explanation or additional context"
+    }
+  ]
+}
+```
+
+**Option 2 - Alternative format:**
+```json
+{
+  "follow_up_actions": [
+    {
+      "step": "Initial Screening",
+      "action": "Assess security skills alignment...",
+      "owner": "Recruiter"
+    }
+  ]
+}
+```
+
+Each item in the array MUST have:
+- For Option 1: `label`, `value`, and optional `helper` fields
+- For Option 2: `step`, `action`, and optional `owner` fields
+
+Do not include any markdown formatting, code blocks, or additional text. Return only the JSON object.

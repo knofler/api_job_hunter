@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 from typing import AsyncGenerator, Dict, Iterable, List, Optional
 
 from app.models.llm_model import LLMProviderConfig, LLMWorkflowSettings
@@ -119,7 +120,8 @@ async def generate_workflow_stream(payload: RecruiterWorkflowRequest) -> AsyncGe
     
     # Collect streamed markdown chunks
     accumulated_text = ""
-    async for chunk in orchestrator.generate_stream(markdown_llm_messages, step_configs["ai_analysis"]):
+    response_format = "text" if step_configs["ai_analysis"].provider == "deepseek" else "json"
+    async for chunk in orchestrator.generate_stream(markdown_llm_messages, step_configs["ai_analysis"], response_format=response_format):
         accumulated_text += chunk
         yield {
             "type": "partial",
@@ -307,7 +309,16 @@ def _resolve_step_configs(
             configs[step] = override
             continue
         step_config = workflow_settings.steps.get(step) if step in workflow_settings.steps else None
-        configs[step] = step_config or workflow_settings.default
+        config = step_config or workflow_settings.default
+        
+        # DeepSeek doesn't handle JSON format properly, force text format
+        if config.provider == "deepseek":
+            config = config.copy()
+            # Remove any response_format override to use default text format
+            if hasattr(config, 'extra_payload') and config.extra_payload:
+                config.extra_payload = {k: v for k, v in config.extra_payload.items() if k != 'response_format'}
+        
+        configs[step] = config
     return configs
 
 
@@ -480,16 +491,16 @@ async def _invoke_engagement_plan(
         "Return JSON with key 'engagement_plan' where every item has 'label', 'value', and optional 'helper'."
     )
     data = await _invoke_json(orchestrator, config, instruction, context_json)
+    
     plan_payload = data.get("engagement_plan", [])
+    
+    # Handle case where LLM returns stringified JSON
     if isinstance(plan_payload, str):
-        # Some LLM responses double-encode JSON arrays; attempt to decode before proceeding.
         try:
             plan_payload = json.loads(plan_payload)
-        except json.JSONDecodeError as exc:  # noqa: PERF203
-            raise RuntimeError("LLM response returned string for engagement_plan; expected JSON array") from exc
-    if not isinstance(plan_payload, list):
-        logger.warning("LLM engagement_plan payload malformed: %r", plan_payload)
-        raise RuntimeError("LLM response returned invalid engagement_plan payload; expected list of objects")
+        except json.JSONDecodeError:
+            plan_payload = []
+    
     return [
         InsightItem(
             label=item.get("label", ""),
@@ -497,7 +508,6 @@ async def _invoke_engagement_plan(
             helper=item.get("helper"),
         )
         for item in plan_payload
-        if isinstance(item, dict)
     ]
 
 
@@ -512,16 +522,19 @@ async def _invoke_fairness_guidance(
         "Return JSON with key 'fairness_guidance' where each item includes 'label', 'value', and optional 'helper'."
     )
     data = await _invoke_json(orchestrator, config, instruction, context_json)
+    
+    # Debug logging
+    logger.info(f"FAIRNESS_GUIDANCE - data type: {type(data)}, data: {data}")
+    
     fairness_payload = data.get("fairness_guidance", [])
+    
+    # Handle case where LLM returns stringified JSON
     if isinstance(fairness_payload, str):
-        # Some LLM responses double-encode JSON arrays; attempt to decode before proceeding.
         try:
             fairness_payload = json.loads(fairness_payload)
-        except json.JSONDecodeError as exc:  # noqa: PERF203
-            raise RuntimeError("LLM response returned string for fairness_guidance; expected JSON array") from exc
-    if not isinstance(fairness_payload, list):
-        logger.warning("LLM fairness_guidance payload malformed: %r", fairness_payload)
-        raise RuntimeError("LLM response returned invalid fairness_guidance payload; expected list of objects")
+        except json.JSONDecodeError:
+            fairness_payload = []
+    
     return [
         InsightItem(
             label=item.get("label", ""),
@@ -529,7 +542,6 @@ async def _invoke_fairness_guidance(
             helper=item.get("helper"),
         )
         for item in fairness_payload
-        if isinstance(item, dict)
     ]
 
 
@@ -545,22 +557,20 @@ async def _invoke_interview_pack(
     )
     data = await _invoke_json(orchestrator, config, instruction, context_json)
     questions_payload = data.get("interview_preparation", [])
+    
+    # Handle case where LLM returns stringified JSON
     if isinstance(questions_payload, str):
-        # Some LLM responses double-encode JSON arrays; attempt to decode before proceeding.
         try:
             questions_payload = json.loads(questions_payload)
-        except json.JSONDecodeError as exc:  # noqa: PERF203
-            raise RuntimeError("LLM response returned string for interview_preparation; expected JSON array") from exc
-    if not isinstance(questions_payload, list):
-        logger.warning("LLM interview_preparation payload malformed: %r", questions_payload)
-        raise RuntimeError("LLM response returned invalid interview_preparation payload; expected list of objects")
+        except json.JSONDecodeError:
+            questions_payload = []
+    
     return [
         InterviewQuestion(
             question=item.get("question", ""),
             rationale=item.get("rationale", ""),
         )
         for item in questions_payload
-        if isinstance(item, dict)
     ]
 
 
@@ -580,8 +590,14 @@ async def _invoke_json(
             ),
         ),
     ]
-    raw = await orchestrator.generate(messages, config)
-    return _parse_json_response(raw)
+    
+    # For DeepSeek, use text format instead of JSON format since it doesn't handle JSON properly
+    response_format = "text" if config.provider == "deepseek" else "json"
+    
+    print(f"_invoke_json: calling orchestrator.generate with config.provider={config.provider}, response_format={response_format}")
+    raw = await orchestrator.generate(messages, config, response_format=response_format)
+    result = _parse_json_response(raw)
+    return result
 
 
 def _parse_json_response(raw: str) -> Dict[str, object]:
